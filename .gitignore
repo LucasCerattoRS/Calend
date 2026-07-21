@@ -1,0 +1,19 @@
+# DADO PESSOAL DE SAÚDE — nunca versionar. O código entra, o dado não.
+dados.json
+Calendario.html
+
+# Controle interno de sessões de trabalho — não faz parte do material público.
+docs/estudo/RETOMADA-*.md
+
+# O exemplo (dados inventados) PODE entrar — é ele que documenta o formato.
+!dados.exemplo.json
+
+# Sistema / editor
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
+
+# Página de demonstração gerada pelo quickstart do README — regerável, não versionar
+demo.html

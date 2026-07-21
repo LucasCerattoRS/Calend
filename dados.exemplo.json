@@ -1,0 +1,26 @@
+{
+  "_leia": "ESTE É O ARQUIVO DE EXEMPLO, com dados inventados — é o único que pode ir pro git. O de verdade é o dados.json, que fica só no pendrive.",
+
+  "eventos": [
+    {
+      "nome": "Sobriedade",
+      "inicio": "2000-01-01T00:00",
+      "cor": "verde",
+      "obs": "cor: verde, ciano ou rosa — identifica o contador na página. obs é opcional e aparece como nota."
+    }
+  ],
+
+  "medicamentos": [
+    {
+      "nome": "Remédio de exemplo",
+      "apresentacao": "10mg",
+      "periodos": [
+        { "de": "2000-01-01", "ate": null, "dose": "1 comprimido", "momento": "manhã" }
+      ]
+    }
+  ],
+
+  "confirmar": [
+    "cada item aqui vira um aviso amarelo na página, pra não esquecer o que ficou em aberto"
+  ]
+}
