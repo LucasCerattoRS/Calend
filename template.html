@@ -46,26 +46,37 @@
   .muted { color: var(--mudo); font-size: .875rem; }
   .nota { color: var(--mudo); font-size: .8rem; margin-top: 2px; }
 
-  /* ---- contadores: stat tiles com medidor rumo ao próximo marco ---- */
-  .tiles { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(232px, 1fr)); }
-  .tile { background: var(--superficie); border: 1px solid var(--borda); border-radius: 14px;
-          padding: 16px 16px 14px; box-shadow: var(--sombra); }
-  .tile h3 { margin: 0; font-size: .82rem; font-weight: 600; color: var(--ink2);
-             display: flex; align-items: center; gap: 7px; }
-  .tile .ponto { width: 8px; height: 8px; border-radius: 50%; background: var(--cor); flex: none; }
-  .tile .valor { font-size: 2.6rem; font-weight: 650; line-height: 1.1; margin-top: 8px;
-                 letter-spacing: -.02em; }
-  .tile .valor span { font-size: 1rem; font-weight: 500; color: var(--ink2); letter-spacing: 0; }
-  .tile .sub { color: var(--mudo); font-size: .8rem; margin-top: 2px; }
-  .tile .vivo { font-size: .85rem; color: var(--ink2); margin-top: 8px;
-                font-variant-numeric: tabular-nums; min-height: 1.3em; }
-  .medidor { height: 8px; border-radius: 4px; margin-top: 10px; overflow: hidden;
-             background: var(--linha);
-             background: color-mix(in srgb, var(--cor) 15%, transparent); }
-  .medidor .fill { height: 100%; width: 0; background: var(--cor);
-                   border-radius: 0 4px 4px 0; transition: width .6s ease; }
-  .tile .meta { display: flex; justify-content: space-between; gap: 8px;
-                color: var(--mudo); font-size: .72rem; margin-top: 6px; }
+  /* ---- contadores: barras proporcionais (inspiradas nos apps de sobriedade) ----
+     Cada barra ocupa a fração da sua unidade cheia — 17h de 24, 23min de 60 — que é
+     o que faz o desenho "respirar" ao longo do dia em vez de ficar sempre igual.
+     O bloco é sempre escuro: é o herói da página e fica idêntico nos dois temas,
+     então as cores das barras são fixas e checadas contra o fundo #14414f. */
+  .contadores { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  .evento { background: #14414f; border-radius: 14px; padding: 18px 18px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,.18); }
+  .evento .rotulo { color: #cfe4ea; font-weight: 650; font-size: .95rem; margin-bottom: 2px;
+                    display: flex; align-items: center; gap: 7px; }
+  .evento .ponto { width: 8px; height: 8px; border-radius: 50%; background: var(--cor); flex: none; }
+  .evento .desde { color: #8fb3bd; font-size: .8rem; margin-bottom: 16px; }
+  .barras { display: grid; gap: 9px; }
+  .trilho { background: rgba(255,255,255,.055); border-radius: 5px; }
+  .barra {
+    /* canto direito cortado na diagonal, como no app de referência */
+    clip-path: polygon(0 0, 100% 0, calc(100% - 16px) 100%, 0 100%);
+    border-radius: 5px 0 0 5px; padding: 9px 16px; min-width: 128px;
+    color: #fff; font-size: 1.28rem; line-height: 1.15; white-space: nowrap;
+    transition: width .4s ease;
+  }
+  .barra b { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .barra i { font-style: italic; font-weight: 400; opacity: .93; margin-left: 5px; font-size: .95em; }
+  .c-dias     { background: linear-gradient(95deg, #17b981, #2ed3a0); }
+  .c-horas    { background: linear-gradient(95deg, #21a7e0, #45c3f0); }
+  .c-minutos  { background: linear-gradient(95deg, #4b8fe0, #6ea9ee); }
+  .c-segundos { background: linear-gradient(95deg, #7b6fd0, #9b8ee0); }
+  .evento .meta { color: #8fb3bd; font-size: .72rem; margin-top: 12px;
+                  display: flex; justify-content: space-between; gap: 8px; }
+  .evento .nota { color: #8fb3bd; margin-top: 12px; }
+  @media (max-width: 520px) { .barra { font-size: 1.08rem; min-width: 108px; } }
 
   /* ---- hoje ---- */
   .momento + .momento { border-top: 1px solid var(--linha); margin-top: 12px; padding-top: 12px; }
@@ -153,12 +164,12 @@
   footer code { background: var(--superficie); border: 1px solid var(--linha);
                 border-radius: 5px; padding: 1px 5px; font-size: .92em; }
 
-  @media (prefers-reduced-motion: reduce) { .medidor .fill { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .barra { transition: none; } }
   @media print {
     :root { --plano: #fff; --superficie: #fff; --ink: #000; --ink2: #444;
             --mudo: #666; --linha: #ddd; --borda: #ccc; --sombra: none; }
     body { padding: 0; }
-    .tile, .card { break-inside: avoid; }
+    .evento, .card { break-inside: avoid; }
   }
 </style>
 </head>
@@ -173,7 +184,7 @@
 
   <section>
     <h2>Contagem</h2>
-    <div class="tiles" id="contadores"></div>
+    <div class="contadores" id="contadores"></div>
   </section>
 
   <div class="duplo">
@@ -254,6 +265,16 @@ function marcoDe(dias) {
   return { prox, faltam: prox - dias, frac: (dias - prev) / (prox - prev) };
 }
 
+// Cada barra é uma unidade de tempo. `teto` é o valor em que a barra enche:
+// 24h no dia, 60min na hora — e 30 dias nos dias, que é arbitrário mas dá a
+// leitura de "quanto falta pro mês virar" sem a barra travar cheia pra sempre.
+const UNIDADES = [
+  { chave: 'dias', rotulo: ['dia', 'dias'], teto: 30 },
+  { chave: 'horas', rotulo: ['hora', 'horas'], teto: 24 },
+  { chave: 'minutos', rotulo: ['minuto', 'minutos'], teto: 60 },
+  { chave: 'segundos', rotulo: ['segundo', 'segundos'], teto: 60 },
+];
+
 function pintarContadores() {
   const agora = new Date();
   const alvo = document.getElementById('contadores');
@@ -265,33 +286,43 @@ function pintarContadores() {
     const semTxt = sem >= 1
       ? ` · ${plural(sem, 'semana', 'semanas')}${resto ? ` e ${plural(resto, 'dia', 'dias')}` : ''}` : '';
     const m = marcoDe(dias);
-    return `<article class="tile" style="--cor:${corDe(ev.cor)}">
-      <h3><span class="ponto"></span>${esc(ev.nome)}</h3>
-      <div class="valor">${dias}<span> ${dias === 1 ? 'dia' : 'dias'}</span></div>
-      <div class="sub">desde ${fmtLongo(ev.inicio)}${semTxt}</div>
-      <div class="vivo" data-vivo="${i}">&nbsp;</div>
-      ${m ? `<div class="medidor"><div class="fill" data-w="${(m.frac * 100).toFixed(1)}%"></div></div>
-      <div class="meta"><span>rumo a ${m.prox} dias</span><span>${m.faltam === 1 ? 'falta 1' : `faltam ${m.faltam}`}</span></div>`
+    return `<article class="evento" data-ev="${i}" style="--cor:${corDe(ev.cor)}">
+      <div class="rotulo"><span class="ponto"></span>${esc(ev.nome)}</div>
+      <div class="desde">desde ${fmtLongo(ev.inicio)}${semTxt}</div>
+      <div class="barras">${UNIDADES.map((u) => `
+        <div class="trilho"><div class="barra c-${u.chave}" data-u="${u.chave}"></div></div>`).join('')}
+      </div>
+      ${m ? `<div class="meta"><span>rumo a ${m.prox} dias</span><span>${m.faltam === 1 ? 'falta 1' : `faltam ${m.faltam}`}</span></div>`
     : `<div class="meta"><span>acima de ${MARCOS[MARCOS.length - 1]} dias — marco máximo vencido</span></div>`}
       ${ev.obs ? `<div class="nota">${esc(ev.obs)}</div>` : ''}
     </article>`;
   }).join('');
-  requestAnimationFrame(() => alvo.querySelectorAll('.medidor .fill')
-    .forEach((f) => { f.style.width = f.dataset.w; }));
+  tique();
 }
 
-// A cada segundo: horas/min/seg ao vivo; na virada do dia, recarrega tudo.
+// A cada segundo: é o que dá a sensação de tempo correndo. Na virada do dia,
+// recarrega tudo — senão "hoje" e o histórico ficariam presos no dia anterior.
 function tique() {
   const agora = new Date();
   if (isoDe(agora) !== hojeISO) { location.reload(); return; }
-  document.querySelectorAll('[data-vivo]').forEach((el) => {
-    const ev = (DADOS.eventos || [])[Number(el.getAttribute('data-vivo'))];
-    if (!ev) return;
+  (DADOS.eventos || []).forEach((ev, i) => {
+    const bloco = document.querySelector(`.evento[data-ev="${i}"]`);
+    if (!bloco) return;
     const ms = Math.max(0, agora - instante(ev.inicio));
-    const h = Math.floor(ms / 3600000) % 24;
-    const mnt = Math.floor(ms / 60000) % 60;
-    const s = Math.floor(ms / 1000) % 60;
-    el.textContent = `e ${h} h ${String(mnt).padStart(2, '0')} min ${String(s).padStart(2, '0')} s`;
+    const v = {
+      dias: Math.floor(ms / DIA_MS),
+      horas: Math.floor(ms / 3600000) % 24,
+      minutos: Math.floor(ms / 60000) % 60,
+      segundos: Math.floor(ms / 1000) % 60,
+    };
+    for (const u of UNIDADES) {
+      const el = bloco.querySelector(`.barra[data-u="${u.chave}"]`);
+      if (!el) continue;
+      const n = v[u.chave];
+      el.innerHTML = `<b>${n}</b> <i>${n === 1 ? u.rotulo[0] : u.rotulo[1]}</i>`;
+      // 22% de piso pra caber o texto quando o número é pequeno (0 segundos etc.)
+      el.style.width = `${22 + Math.min(1, n / u.teto) * 78}%`;
+    }
   });
 }
 

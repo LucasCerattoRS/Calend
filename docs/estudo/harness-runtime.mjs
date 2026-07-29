@@ -31,10 +31,14 @@ const script = template.match(/<script>([\s\S]*)<\/script>/)[1]
 
 // DOM de mentira: só o que o script usa. Cada getElementById devolve um objeto
 // que "aceita" innerHTML/textContent — e a gente lê depois o que ficou lá.
+// querySelector devolve `null`: o script trata "não achei" como caso normal
+// (é o que acontece na virada do dia, quando o bloco ainda não foi pintado),
+// então o resultado impresso é o HTML do innerHTML, sem o tique ao vivo.
 const els = {};
-const el = (id) => (els[id] ??= { innerHTML: '', textContent: '', querySelectorAll: () => [] });
+const nulo = { querySelector: () => null, querySelectorAll: () => [] };
+const el = (id) => (els[id] ??= { innerHTML: '', textContent: '', ...nulo });
 const contexto = {
-  document: { getElementById: el, querySelectorAll: () => [] },
+  document: { getElementById: el, ...nulo },
   location: { reload() {} },
   setInterval: () => 0,           // sem laço: uma passada só
   requestAnimationFrame: () => 0, // sem paint: animação não interessa aqui

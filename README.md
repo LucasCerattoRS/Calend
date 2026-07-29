@@ -10,7 +10,7 @@
 Sem framework. Sem servidor. Sem banco de dados. Sem `node_modules`. Um arquivo `.html`
 autocontido que abre com dois cliques em qualquer máquina — Windows ou Linux — e mostra:
 
-- ⏱️ **Contadores de dias** desde eventos importantes (com marcos de progresso: 7, 30, 90, 365 dias…)
+- ⏱️ **Contadores em barras** — dias, horas, minutos e segundos desde eventos importantes, cada barra ocupando a fração da sua unidade cheia e correndo ao vivo (com marcos: 7, 30, 90, 365 dias…)
 - 💊 **O que tomar hoje**, agrupado por momento do dia (manhã · tarde · jantar · noite)
 - 🔜 **Próximas mudanças** de dose ou término de tratamento
 - 📜 **Histórico** em linha do tempo do que já aconteceu
@@ -19,6 +19,22 @@ autocontido que abre com dois cliques em qualquer máquina — Windows ou Linux 
 A página **se recalcula a partir da data do dia** toda vez que abre. Por isso não fica
 desatualizada: os contadores sobem sozinhos e as trocas de dose entram em vigor na data
 certa, sem ninguém tocar em nada.
+
+---
+
+## 🎛️ Duas versões da contagem
+
+O projeto mantém **duas leituras do mesmo dado**, em branches paralelos. Tudo o mais
+(medicamentos, histórico, pendências, formato do `dados.json`) é idêntico — muda só o
+bloco de **Contagem**:
+
+| Branch | Contagem | Quando serve |
+|---|---|---|
+| **`main`** | *Stat tiles*: o número de dias como herói, com um medidor rumo ao próximo marco | Leitura de relance — "quantos dias?" e "quanto falta pro próximo marco?" |
+| **`barras`** | Bloco escuro com quatro barras (dias · horas · minutos · segundos), cada uma preenchendo a fração da sua unidade e correndo a cada segundo | Sensação de tempo passando — o desenho muda ao longo do dia |
+
+Trocar de versão é trocar de branch e regerar: `git switch barras && node gerar.mjs`.
+O `dados.json` não muda, então a troca é reversível a qualquer momento.
 
 ---
 
