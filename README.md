@@ -22,6 +22,22 @@ certa, sem ninguém tocar em nada.
 
 ---
 
+## 🎛️ Duas versões da contagem
+
+O projeto mantém **duas leituras do mesmo dado**, em branches paralelos. Tudo o mais
+(medicamentos, histórico, pendências, formato do `dados.json`) é idêntico — muda só o
+bloco de **Contagem**:
+
+| Branch | Contagem | Quando serve |
+|---|---|---|
+| **`main`** (esta) | *Stat tiles*: o número de dias como herói, com um medidor rumo ao próximo marco | Leitura de relance — "quantos dias?" e "quanto falta pro próximo marco?" |
+| **[`barras`](https://github.com/LucasCerattoRS/Calend/tree/barras)** | Bloco escuro com quatro barras (dias · horas · minutos · segundos), cada uma preenchendo a fração da sua unidade e correndo a cada segundo | Sensação de tempo passando — o desenho muda ao longo do dia |
+
+Trocar de versão é trocar de branch e regerar: `git switch barras && node gerar.mjs`.
+O `dados.json` não muda, então a troca é reversível a qualquer momento.
+
+---
+
 ## 🧭 Filosofia
 
 Este projeto otimiza para um contexto que a maioria das ferramentas web ignora:
