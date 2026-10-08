@@ -204,7 +204,6 @@ script inteiro (todas as seções em branco); um período sem `de` sumia em sil�
 `gerar.mjs` recusa o dado e diz onde está o erro — caso **B4** do `CASOS-LIMITE.md`.
 
 **Pendências**
-- O branch `barras` ainda não tem essa validação (o `gerar.mjs` é o mesmo; basta trazer o commit).
 - `sync-pendrive.sh` só existe para Linux; no Windows a cópia pro pendrive é manual.
 
 ---
