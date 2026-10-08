@@ -1,0 +1,17 @@
+# Roda o teste do build e o arnês da página a cada push (main e barras).
+name: testes
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test testes/gerar.test.mjs
+      - run: node docs/estudo/harness-runtime.mjs
