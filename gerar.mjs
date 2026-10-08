@@ -55,6 +55,24 @@ if (!dados || typeof dados !== 'object' || Array.isArray(dados)) {
   process.exit(1);
 }
 
+// As datas são a única coisa que a página não sabe contornar: evento sem `inicio`
+// derruba o script inteiro (todas as seções em branco) e período sem `de` some em
+// silêncio. Melhor recusar aqui, dizendo onde está, do que gerar uma página muda.
+const DATA = /^\d{4}-\d{2}-\d{2}/;
+const faltas = [];
+(dados.eventos || []).forEach((ev, i) => {
+  if (!DATA.test(ev?.inicio ?? '')) faltas.push(`eventos[${i}] ("${ev?.nome ?? '?'}"): falta "inicio" no formato AAAA-MM-DD`);
+});
+(dados.medicamentos || []).forEach((m, i) => (m?.periodos || []).forEach((p, j) => {
+  if (!DATA.test(p?.de ?? '')) faltas.push(`medicamentos[${i}].periodos[${j}] ("${m?.nome ?? '?'}"): falta "de" no formato AAAA-MM-DD`);
+}));
+if (faltas.length) {
+  console.error(`O ${entrada} tem data faltando ou fora do formato:`);
+  faltas.forEach((f) => console.error(`  - ${f}`));
+  console.error('Nada foi gerado — corrija o dados.json e rode de novo.');
+  process.exit(1);
+}
+
 // Escreve nos DOIS lugares: no pendrive (junto do dado, pra abrir em qualquer
 // máquina) e aqui na pasta pessoal (pra abrir sem precisar do pendrive plugado).
 // São só cópias de leitura — o dado de verdade continua sendo um só, o dados.json.

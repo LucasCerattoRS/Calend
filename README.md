@@ -183,8 +183,42 @@ Calend/
 ├── sync-pendrive.sh       # Leva o código pro pendrive (Linux; nunca toca no dado)
 ├── dados.exemplo.json     # O formato, documentado com dados inventados
 ├── .gitignore             # A política: dados.json e Calendario.html NUNCA entram
+├── testes/                # node --test testes/gerar.test.mjs (runner nativo do Node)
 └── docs/estudo/           # Documentação didática completa (ver tabela acima)
 ```
+
+---
+
+## ✅ Estado e testes
+
+Em uso real e estável. Tecnologias: HTML + CSS + JavaScript puro na página, Node.js
+(só módulos nativos) no build, Bash no `sync-pendrive.sh`.
+
+```bash
+node --test testes/gerar.test.mjs              # build: dado válido gera; data faltando é recusada
+node docs/estudo/harness-runtime.mjs           # roda o <script> da página em Node e mostra cada seção
+```
+
+**Revisão de 08/10/2026:** um evento sem `inicio` passava pelo build e, na página, derrubava o
+script inteiro (todas as seções em branco); um período sem `de` sumia em silêncio. Agora o
+`gerar.mjs` recusa o dado e diz onde está o erro — caso **B4** do `CASOS-LIMITE.md`.
+
+**Pendências**
+- O branch `barras` ainda não tem essa validação (o `gerar.mjs` é o mesmo; basta trazer o commit).
+- `sync-pendrive.sh` só existe para Linux; no Windows a cópia pro pendrive é manual.
+
+---
+
+## 🎓 Para estudar
+
+1. **Datas em horário local, sem UTC** — `template.html`, funções `diaDe` e `instante`
+   (logo no começo do `<script>`): por que `new Date("2026-01-01")` adiantaria o contador.
+2. **Templating por marcador** — `gerar.mjs`, o `replace` com **função** no `/*DADOS*/…/*FIM*/`:
+   por que uma string ali corromperia o JSON (`$&`, `$'`) e por que `</` é escapado.
+3. **View = f(estado)** — `template.html`, `pintarHoje` / `mudancas`: a página inteira é recalculada
+   a partir do dado e de `new Date()`; nada de "dias decorridos" guardado.
+4. **Validar na fronteira** — `gerar.mjs`, bloco `faltas`: o erro aparece no build, com caminho
+   (`medicamentos[0].periodos[1]`), em vez de virar uma página em branco.
 
 ---
 

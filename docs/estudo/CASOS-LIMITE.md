@@ -43,6 +43,19 @@ e `exit 1`.
 **Por quê:** a validação tripla `!dados || typeof !== 'object' || Array.isArray`
 (gerar.mjs, l. 53–56). ✅ falha limpa.
 
+### B4. Evento sem `inicio` / período sem `de` (revisão de 08/10/2026)
+
+```json
+{ "eventos": [ { "nome": "E" } ] }
+```
+
+**Antes:** o build passava, e na página o `fmtLongo(undefined)` lançava `TypeError` dentro de
+`pintarContadores` — o script parava ali e **todas** as seções ficavam em branco, remédios
+inclusive. Período sem `de` sumia em silêncio (e com dois deles a ordenação quebrava).
+
+**Agora:** `gerar.mjs` lista cada data faltando (`eventos[0] ("E"): falta "inicio"…`), não
+gera nada e sai com `exit 1`. Provado em `testes/gerar.test.mjs`. ✅ falha limpa.
+
 ### B3. Caso de sucesso (controle)
 
 `node gerar.mjs dados.exemplo.json <saida>` → gerou um HTML autocontido de ~22 KB,
