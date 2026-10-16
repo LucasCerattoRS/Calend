@@ -209,11 +209,12 @@ dia de uso e a virada do dia à meia-noite — o que decide se o remédio aparec
 - `dados.json` salvo com BOM UTF-8 (Bloco de Notas do Windows) era recusado como "JSON inválido".
   Agora o BOM é ignorado.
 - Evento ou remédio sem `nome`, ou período sem `dose`, passava pelo build e a página escrevia a
-  palavra "undefined". Agora o build recusa e diz onde.
+  palavra "undefined". Agora o build recusa e diz onde. Número (`"dose": 2`) continua aceito —
+  a página sempre o mostrou certo (revisão do PR #4).
 - Não corrigido (fora do limite desta auditoria): `eventos`, `medicamentos` ou `periodos` que não
   sejam lista (ex.: `{}` ou texto) fazem o `gerar.mjs` abortar com stack trace em vez de mensagem;
   a escrita do `Calendario.html` não é atômica (queda no meio deixa arquivo truncado).
-- Testes: `node --test testes/gerar.test.mjs testes/pagina.test.mjs` → 15 passam.
+- Testes: `node --test testes/gerar.test.mjs testes/pagina.test.mjs` → 16 passam.
 
 **Revisão de 09/10/2026 (datas):**
 - `de` com hora (`2026-03-01T08:00`) fazia o remédio **sumir de "Hoje" no dia em que começa**

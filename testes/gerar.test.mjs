@@ -104,12 +104,27 @@ test('evento/remédio sem nome e período sem dose são recusados', () => {
     [{ medicamentos: [{ periodos: [{ de: '2026-03-01', dose: '1' }] }] }, /medicamentos\[0\].*"nome"/],
     [{ medicamentos: [{ nome: 'M', periodos: [{ de: '2026-03-01' }] }] }, /medicamentos\[0\]\.periodos\[0\].*"dose"/],
     [{ eventos: [{ nome: '  ', inicio: '2026-03-01' }] }, /eventos\[0\].*"nome"/],
-    [{ medicamentos: [{ nome: 'M', periodos: [{ de: '2026-03-01', dose: 2 }] }] }, /"dose"/],
+    [{ medicamentos: [{ nome: 'M', periodos: [{ de: '2026-03-01', dose: true }] }] }, /"dose"/],
   ];
   for (const [dados, esperado] of casos) {
     const r = gerar(dados);
     assert.equal(r.status, 1, JSON.stringify(dados));
     assert.match(r.stderr, esperado);
     assert.ok(!r.gerou);
+  }
+});
+
+// `"dose": 2` (número, sem aspas) sempre funcionou: a página mostra "2". Um dados.json
+// que já gerava a página não pode passar a ser recusado por isso.
+test('dose e nome numéricos continuam aceitos', () => {
+  for (const dados of [
+    { medicamentos: [{ nome: 'M', periodos: [{ de: '2026-03-01', dose: 2 }] }] },
+    { medicamentos: [{ nome: 'M', periodos: [{ de: '2026-03-01', dose: 0.5 }] }] },
+    { medicamentos: [{ nome: 'M', periodos: [{ de: '2026-03-01', dose: 0 }] }] },
+    { eventos: [{ nome: 2026, inicio: '2026-03-01' }] },
+  ]) {
+    const r = gerar(dados);
+    assert.equal(r.status, 0, `${JSON.stringify(dados)}\n${r.stderr}`);
+    assert.ok(r.gerou);
   }
 });
