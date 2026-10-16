@@ -12,11 +12,11 @@ import { fileURLToPath } from 'node:url';
 const GERAR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'gerar.mjs');
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'calend-'));
 
-function gerar(dados) {
+function gerar(dados, prefixo = '') {
   const entrada = path.join(TMP, 'dados.json');
   const saida = path.join(TMP, 'saida.html');
   fs.rmSync(saida, { force: true });
-  fs.writeFileSync(entrada, JSON.stringify(dados));
+  fs.writeFileSync(entrada, prefixo + JSON.stringify(dados));
   const r = spawnSync(process.execPath, [GERAR, entrada, saida], { encoding: 'utf8' });
   return { ...r, gerou: fs.existsSync(saida) };
 }
@@ -85,5 +85,31 @@ test('hora fora de 00–23 e minuto/segundo fora de 00–59 são recusados, com 
   for (const t of ['2026-03-01', '2026-03-01T00:00', '2026-03-01T23:59', '2026-03-01T23:59:59', '2026-03-01T00:00:00']) {
     assert.equal(ev(t).status, 0, t);
     assert.equal(med(t).status, 0, t);
+  }
+});
+
+// Bloco de Notas do Windows grava UTF-8 com BOM; JSON.parse recusava o arquivo
+// inteiro como "JSON inválido", embora o conteúdo estivesse correto.
+test('dados.json com BOM UTF-8 é aceito', () => {
+  const r = gerar({ eventos: [{ nome: 'E', inicio: '2000-01-01' }] }, '\uFEFF');
+  assert.equal(r.status, 0, r.stderr);
+  assert.ok(r.gerou);
+});
+
+// Sem `nome` (evento ou remédio) ou sem `dose` (período), a página imprimia a palavra
+// "undefined" no lugar do dado. Melhor recusar no build, dizendo onde.
+test('evento/remédio sem nome e período sem dose são recusados', () => {
+  const casos = [
+    [{ eventos: [{ inicio: '2026-03-01' }] }, /eventos\[0\].*"nome"/],
+    [{ medicamentos: [{ periodos: [{ de: '2026-03-01', dose: '1' }] }] }, /medicamentos\[0\].*"nome"/],
+    [{ medicamentos: [{ nome: 'M', periodos: [{ de: '2026-03-01' }] }] }, /medicamentos\[0\]\.periodos\[0\].*"dose"/],
+    [{ eventos: [{ nome: '  ', inicio: '2026-03-01' }] }, /eventos\[0\].*"nome"/],
+    [{ medicamentos: [{ nome: 'M', periodos: [{ de: '2026-03-01', dose: 2 }] }] }, /"dose"/],
+  ];
+  for (const [dados, esperado] of casos) {
+    const r = gerar(dados);
+    assert.equal(r.status, 1, JSON.stringify(dados));
+    assert.match(r.stderr, esperado);
+    assert.ok(!r.gerou);
   }
 });

@@ -44,7 +44,8 @@ if (!fs.existsSync(entrada)) {
 
 let dados;
 try {
-  dados = JSON.parse(fs.readFileSync(entrada, 'utf8'));
+  // Bloco de Notas do Windows salva com BOM (U+FEFF), que o JSON.parse não aceita.
+  dados = JSON.parse(fs.readFileSync(entrada, 'utf8').replace(/^\uFEFF/, ''));
 } catch (e) {
   console.error(`O ${entrada} não é um JSON válido: ${e.message}`);
   console.error('Confira vírgula sobrando, aspas e chaves — o dado não foi tocado.');
@@ -71,17 +72,24 @@ const dataReal = (t) => {
   return x.getUTCFullYear() === a && x.getUTCMonth() === m - 1 && x.getUTCDate() === d;
 };
 const faltas = [];
+// Sem `nome` ou `dose` a página escreveria a palavra "undefined" no lugar do dado.
+const texto = (v) => typeof v === 'string' && v.trim() !== '';
 (dados.eventos || []).forEach((ev, i) => {
+  if (!texto(ev?.nome)) faltas.push(`eventos[${i}]: "nome" ausente ou vazio — texto obrigatório`);
   if (!dataReal(ev?.inicio)) faltas.push(`eventos[${i}] ("${ev?.nome ?? '?'}"): "inicio" ausente ou inválido — use AAAA-MM-DD ou AAAA-MM-DDThh:mm (data que exista)`);
 });
-(dados.medicamentos || []).forEach((m, i) => (m?.periodos || []).forEach((p, j) => {
-  const onde = `medicamentos[${i}].periodos[${j}] ("${m?.nome ?? '?'}")`;
-  if (!dataReal(p?.de)) faltas.push(`${onde}: "de" ausente ou inválido — use AAAA-MM-DD (data que exista)`);
-  if (p?.ate && !dataReal(p.ate)) faltas.push(`${onde}: "ate" inválido — use AAAA-MM-DD ou null (em aberto)`);
-  else if (p?.ate && dataReal(p?.de) && p.ate.slice(0, 10) < p.de.slice(0, 10)) faltas.push(`${onde}: "ate" (${p.ate}) é anterior a "de" (${p.de})`);
-}));
+(dados.medicamentos || []).forEach((m, i) => {
+  if (!texto(m?.nome)) faltas.push(`medicamentos[${i}]: "nome" ausente ou vazio — texto obrigatório`);
+  (m?.periodos || []).forEach((p, j) => {
+    const onde = `medicamentos[${i}].periodos[${j}] ("${m?.nome ?? '?'}")`;
+    if (!texto(p?.dose)) faltas.push(`${onde}: "dose" ausente ou vazia — texto obrigatório`);
+    if (!dataReal(p?.de)) faltas.push(`${onde}: "de" ausente ou inválido — use AAAA-MM-DD (data que exista)`);
+    if (p?.ate && !dataReal(p.ate)) faltas.push(`${onde}: "ate" inválido — use AAAA-MM-DD ou null (em aberto)`);
+    else if (p?.ate && dataReal(p?.de) && p.ate.slice(0, 10) < p.de.slice(0, 10)) faltas.push(`${onde}: "ate" (${p.ate}) é anterior a "de" (${p.de})`);
+  });
+});
 if (faltas.length) {
-  console.error(`O ${entrada} tem data faltando ou fora do formato:`);
+  console.error(`O ${entrada} tem campo obrigatório faltando ou fora do formato:`);
   faltas.forEach((f) => console.error(`  - ${f}`));
   console.error('Nada foi gerado — corrija o dados.json e rode de novo.');
   process.exit(1);
