@@ -213,10 +213,19 @@ dia de uso e a virada do dia à meia-noite — o que decide se o remédio aparec
   mostrou certo. Período sem `dose` (dose ainda não dita, ver `confirmar`) continua aceito e a
   página mostra vazio em vez de "undefined"; só dose de tipo errado (ex.: `true`) é recusada
   (revisão do PR #4).
-- Não corrigido (fora do limite desta auditoria): `eventos`, `medicamentos` ou `periodos` que não
-  sejam lista (ex.: `{}` ou texto) fazem o `gerar.mjs` abortar com stack trace em vez de mensagem;
-  a escrita do `Calendario.html` não é atômica (queda no meio deixa arquivo truncado).
-- Testes: `node --test testes/gerar.test.mjs testes/pagina.test.mjs` → 16 passam.
+- Pendências da auditoria resolvidas (16/10/2026, branch `claude/build-listas-atomico-16out`):
+  - `eventos`, `medicamentos` ou `periodos` que não sejam lista (`{}`, texto, número, `true`)
+    faziam o `gerar.mjs` abortar com stack trace. Agora o build recusa, diz onde
+    (ex.: `medicamentos[0].periodos ("M"): precisa ser uma lista [ … ]`) e não gera nada.
+    Ausente ou `null` continua valendo como lista vazia.
+  - A escrita do `Calendario.html` não era atômica: falha no meio (disco cheio, pendrive
+    arrancado) deixava a página truncada. Agora cada destino é gravado num temporário oculto
+    na mesma pasta (`.Calendario.html.<pid>.tmp`) e renomeado por cima; se falhar, a página
+    anterior fica intacta e o temporário é apagado. Vale para os dois destinos; a falha de um
+    não impede o outro.
+- Testes: `node --test testes/gerar.test.mjs testes/pagina.test.mjs` → 20 passam (antes da
+  correção, os testes novos de lista e de falha no meio da escrita falhavam). O teste de falha
+  no meio usa `ulimit -f` e é pulado no Windows.
 
 **Revisão de 09/10/2026 (datas):**
 - `de` com hora (`2026-03-01T08:00`) fazia o remédio **sumir de "Hoje" no dia em que começa**

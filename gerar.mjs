@@ -75,13 +75,23 @@ const faltas = [];
 // Sem `nome` a página escreveria a palavra "undefined" no lugar do dado.
 // Número (`"dose": 2`) é aceito: a página sempre o mostrou certo.
 const texto = (v) => (typeof v === 'string' && v.trim() !== '') || (typeof v === 'number' && Number.isFinite(v));
-(dados.eventos || []).forEach((ev, i) => {
+// `eventos`, `medicamentos` e `periodos` têm de ser lista. Ausente ou null continua
+// valendo como lista vazia; `{}`, texto ou número derrubavam o script com stack trace.
+const tipo = (v) => (typeof v === 'string' ? 'texto' : typeof v === 'number' ? 'número'
+  : typeof v === 'boolean' ? 'verdadeiro/falso' : 'objeto { … }');
+const lista = (v, onde) => {
+  if (v === undefined || v === null) return [];
+  if (Array.isArray(v)) return v;
+  faltas.push(`${onde}: precisa ser uma lista [ … ] (veio ${tipo(v)}) — use [] se não houver nenhum`);
+  return [];
+};
+lista(dados.eventos, '"eventos"').forEach((ev, i) => {
   if (!texto(ev?.nome)) faltas.push(`eventos[${i}]: "nome" ausente ou vazio — texto (ou número) obrigatório`);
   if (!dataReal(ev?.inicio)) faltas.push(`eventos[${i}] ("${ev?.nome ?? '?'}"): "inicio" ausente ou inválido — use AAAA-MM-DD ou AAAA-MM-DDThh:mm (data que exista)`);
 });
-(dados.medicamentos || []).forEach((m, i) => {
+lista(dados.medicamentos, '"medicamentos"').forEach((m, i) => {
   if (!texto(m?.nome)) faltas.push(`medicamentos[${i}]: "nome" ausente ou vazio — texto (ou número) obrigatório`);
-  (m?.periodos || []).forEach((p, j) => {
+  lista(m?.periodos, `medicamentos[${i}].periodos ("${m?.nome ?? '?'}")`).forEach((p, j) => {
     const onde = `medicamentos[${i}].periodos[${j}] ("${m?.nome ?? '?'}")`;
     // Dose ainda não dita (ver `confirmar` no README) é legítima: período sem `dose`, com
     // null ou "" vira texto vazio — a página mostra vazio em vez de "undefined" e o build
@@ -127,13 +137,21 @@ const json = JSON.stringify(dados, null, 2).replace(/<\//g, '<\\/');
 // existissem no JSON virariam referências e corromperiam a página em silêncio.
 const html = template.replace(marcador, () => `/*DADOS*/${json}/*FIM*/`);
 for (const saida of saidas) {
+  let tmp = null;
   try {
     fs.mkdirSync(path.dirname(saida), { recursive: true });
-    fs.writeFileSync(saida, html, 'utf8');
+    // Escrita atômica: grava num temporário NA MESMA PASTA e só então renomeia por cima.
+    // Se faltar espaço ou o pendrive sair no meio, a página anterior continua inteira —
+    // nunca fica um Calendario.html pela metade.
+    tmp = path.join(path.dirname(saida), `.${path.basename(saida)}.${process.pid}.tmp`);
+    fs.writeFileSync(tmp, html, { encoding: 'utf8', flush: true });
+    fs.renameSync(tmp, saida);
+    tmp = null;
     console.log(`Calendario.html gerado: ${saida}`);
   } catch (e) {
+    if (tmp) try { fs.rmSync(tmp, { force: true }); } catch { /* sem o que fazer */ }
     // Pendrive desplugado não pode impedir a cópia da pasta pessoal (e vice-versa).
-    console.warn(`  (não deu pra escrever em ${saida}: ${e.message})`);
+    console.warn(`  (não deu pra escrever em ${saida}: ${e.message} — a versão anterior, se havia, ficou intacta)`);
   }
 }
 

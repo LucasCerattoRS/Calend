@@ -140,3 +140,74 @@ test('período sem dose (ou vazia) continua aceito e não escreve "undefined"', 
     assert.match(html, /"dose": ""/, 'dose deveria ser gravada como texto vazio');
   }
 });
+
+// `eventos`, `medicamentos` ou `periodos` que não são lista derrubavam o gerar.mjs com stack
+// trace (TypeError: forEach is not a function). Agora: mensagem dizendo onde, nada gerado.
+// Ausente ou null continua valendo como lista vazia.
+test('eventos/medicamentos/periodos que não são lista são recusados com mensagem clara', () => {
+  const casos = [];
+  for (const ruim of [{}, 'texto', 3, true]) {
+    casos.push([{ eventos: ruim }, /"eventos": precisa ser uma lista/]);
+    casos.push([{ medicamentos: ruim }, /"medicamentos": precisa ser uma lista/]);
+    casos.push([{ medicamentos: [{ nome: 'M', periodos: ruim }] }, /medicamentos\[0\]\.periodos \("M"\): precisa ser uma lista/]);
+  }
+  for (const [dados, esperado] of casos) {
+    const r = gerar(dados);
+    assert.equal(r.status, 1, JSON.stringify(dados));
+    assert.match(r.stderr, esperado);
+    assert.match(r.stderr, /Nada foi gerado/);
+    assert.doesNotMatch(r.stderr, /TypeError|\n\s+at /, 'não deveria vazar stack trace');
+    assert.ok(!r.gerou);
+  }
+  for (const dados of [{}, { eventos: null, medicamentos: null }, { medicamentos: [{ nome: 'M', periodos: null }] }, { medicamentos: [{ nome: 'M' }] }]) {
+    const r = gerar(dados);
+    assert.equal(r.status, 0, `${JSON.stringify(dados)}\n${r.stderr}`);
+    assert.ok(r.gerou);
+  }
+});
+
+const VALIDO = { eventos: [{ nome: 'E', inicio: '2000-01-01' }] };
+const sobras = (dir) => fs.readdirSync(dir).filter((n) => n.endsWith('.tmp'));
+
+// Escrita não atômica: o writeFileSync trunca o arquivo antes de gravar, então uma falha no
+// meio (disco cheio, pendrive arrancado) deixava a página pela metade. Simulado com limite de
+// tamanho de arquivo (ulimit -f): no código antigo o Calendario.html ficava com 2048 bytes.
+test('falha no meio da escrita mantém a página anterior íntegra e não deixa .tmp', { skip: process.platform === 'win32' }, () => {
+  const dir = fs.mkdtempSync(path.join(TMP, 'atomico-'));
+  const entrada = path.join(dir, 'dados.json');
+  const saida = path.join(dir, 'Calendario.html');
+  const anterior = 'PAGINA ANTERIOR ÍNTEGRA\n';
+  fs.writeFileSync(entrada, JSON.stringify(VALIDO));
+  fs.writeFileSync(saida, anterior);
+  const r = spawnSync('sh', ['-c', 'ulimit -f 4; exec "$0" "$@"', process.execPath, GERAR, entrada, saida], { encoding: 'utf8' });
+  assert.match(r.stderr, /não deu pra escrever/, r.stderr);
+  assert.equal(fs.readFileSync(saida, 'utf8'), anterior);
+  assert.deepEqual(sobras(dir), []);
+});
+
+// Modo normal grava em DOIS destinos (pasta do dados.json e pasta do código). Se o segundo
+// falhar (aqui: no lugar do Calendario.html há uma pasta), o primeiro sai completo, o segundo
+// fica como estava e não sobra temporário em nenhum dos dois.
+test('dois destinos: falha no segundo não estraga o primeiro nem deixa .tmp', () => {
+  const base = fs.mkdtempSync(path.join(TMP, 'dois-'));
+  const app = path.join(base, 'app');
+  const pen = path.join(base, 'pen');
+  fs.mkdirSync(app);
+  fs.mkdirSync(pen);
+  const raiz = path.dirname(GERAR);
+  fs.copyFileSync(GERAR, path.join(app, 'gerar.mjs'));
+  fs.copyFileSync(path.join(raiz, 'template.html'), path.join(app, 'template.html'));
+  fs.mkdirSync(path.join(app, 'Calendario.html', 'ocupado'), { recursive: true });
+  const entrada = path.join(pen, 'dados.json');
+  fs.writeFileSync(entrada, JSON.stringify(VALIDO));
+  fs.writeFileSync(path.join(pen, 'Calendario.html'), 'ANTIGA');
+  const r = spawnSync(process.execPath, [path.join(app, 'gerar.mjs'), entrada], { encoding: 'utf8' });
+  assert.equal(r.status, 0, r.stderr);
+  const html = fs.readFileSync(path.join(pen, 'Calendario.html'), 'utf8');
+  assert.match(html, /\/\*DADOS\*\/[\s\S]*"E"[\s\S]*\/\*FIM\*\//);
+  assert.match(html, /<\/html>\s*$/);
+  assert.match(r.stderr, /não deu pra escrever em .*app/);
+  assert.ok(fs.statSync(path.join(app, 'Calendario.html')).isDirectory());
+  assert.deepEqual(sobras(app), []);
+  assert.deepEqual(sobras(pen), []);
+});
