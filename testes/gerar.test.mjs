@@ -66,3 +66,24 @@ test('"ate" fora do formato ou antes do "de" é recusado; null fica em aberto', 
   assert.equal(com(null).status, 0);
   assert.equal(com('2026-03-01').status, 0);
 });
+
+// Hora/minuto/segundo fora da faixa: "2026-03-01T99:99" passava no formato, o contador
+// normalizava para 05/03 04:39 e a linha do tempo mostrava 01/03.
+test('hora fora de 00–23 e minuto/segundo fora de 00–59 são recusados, com e sem hora', () => {
+  const ev = (inicio) => gerar({ eventos: [{ nome: 'E', inicio }] });
+  const med = (de) => gerar({ medicamentos: [{ nome: 'M', periodos: [{ de, dose: '1' }] }] });
+  for (const t of ['2026-03-01T99:99', '2026-03-01T24:00', '2026-03-01T23:60', '2026-03-01T10:00:60', '2026-03-01T10:00:99']) {
+    for (const r of [ev(t), med(t)]) {
+      assert.equal(r.status, 1, t);
+      assert.ok(!r.gerou, t);
+    }
+    assert.match(ev(t).stderr, /eventos\[0\].*inicio/);
+  }
+  const ate = gerar({ medicamentos: [{ nome: 'M', periodos: [{ de: '2026-03-01', ate: '2026-03-02T25:00', dose: '1' }] }] });
+  assert.equal(ate.status, 1);
+  assert.match(ate.stderr, /"ate" inválido/);
+  for (const t of ['2026-03-01', '2026-03-01T00:00', '2026-03-01T23:59', '2026-03-01T23:59:59', '2026-03-01T00:00:00']) {
+    assert.equal(ev(t).status, 0, t);
+    assert.equal(med(t).status, 0, t);
+  }
+});
