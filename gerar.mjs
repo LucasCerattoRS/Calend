@@ -58,13 +58,25 @@ if (!dados || typeof dados !== 'object' || Array.isArray(dados)) {
 // As datas são a única coisa que a página não sabe contornar: evento sem `inicio`
 // derruba o script inteiro (todas as seções em branco) e período sem `de` some em
 // silêncio. Melhor recusar aqui, dizendo onde está, do que gerar uma página muda.
-const DATA = /^\d{4}-\d{2}-\d{2}/;
+// Também confere que a data EXISTE no calendário: "2026-02-30" viraria 2 de março na
+// página e "2026-13-01" viraria "Invalid Date". E o `ate`, quando preenchido, tem o
+// mesmo formato (um "31/10/2026" ali mantinha o remédio fora de "hoje" para sempre).
+const DATA = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?)?$/;
+const dataReal = (t) => {
+  if (typeof t !== 'string' || !DATA.test(t)) return false;
+  const [a, m, d] = t.slice(0, 10).split('-').map(Number);
+  const x = new Date(Date.UTC(a, m - 1, d));
+  return x.getUTCFullYear() === a && x.getUTCMonth() === m - 1 && x.getUTCDate() === d;
+};
 const faltas = [];
 (dados.eventos || []).forEach((ev, i) => {
-  if (!DATA.test(ev?.inicio ?? '')) faltas.push(`eventos[${i}] ("${ev?.nome ?? '?'}"): falta "inicio" no formato AAAA-MM-DD`);
+  if (!dataReal(ev?.inicio)) faltas.push(`eventos[${i}] ("${ev?.nome ?? '?'}"): "inicio" ausente ou inválido — use AAAA-MM-DD ou AAAA-MM-DDThh:mm (data que exista)`);
 });
 (dados.medicamentos || []).forEach((m, i) => (m?.periodos || []).forEach((p, j) => {
-  if (!DATA.test(p?.de ?? '')) faltas.push(`medicamentos[${i}].periodos[${j}] ("${m?.nome ?? '?'}"): falta "de" no formato AAAA-MM-DD`);
+  const onde = `medicamentos[${i}].periodos[${j}] ("${m?.nome ?? '?'}")`;
+  if (!dataReal(p?.de)) faltas.push(`${onde}: "de" ausente ou inválido — use AAAA-MM-DD (data que exista)`);
+  if (p?.ate && !dataReal(p.ate)) faltas.push(`${onde}: "ate" inválido — use AAAA-MM-DD ou null (em aberto)`);
+  else if (p?.ate && dataReal(p?.de) && p.ate.slice(0, 10) < p.de.slice(0, 10)) faltas.push(`${onde}: "ate" (${p.ate}) é anterior a "de" (${p.de})`);
 }));
 if (faltas.length) {
   console.error(`O ${entrada} tem data faltando ou fora do formato:`);

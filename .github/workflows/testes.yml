@@ -13,5 +13,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: node --test testes/gerar.test.mjs
+      - run: node --test testes/gerar.test.mjs testes/pagina.test.mjs
       - run: node docs/estudo/harness-runtime.mjs
