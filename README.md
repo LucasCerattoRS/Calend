@@ -212,6 +212,9 @@ dia de uso e a virada do dia à meia-noite — o que decide se o remédio aparec
   (`2026-02-30`, `2027-02-29`) e `ate` anterior a `de`.
 - O contador usava milissegundos; início dentro do antigo horário de verão fazia o dia virar
   1 h fora de hora. Agora conta pelo relógio de parede local.
+- O formato aceitava `2026-03-01T99:99`: o contador normalizava para 05/03 04:39 e a linha do
+  tempo mostrava 01/03. Agora o build exige hora 00–23 e minuto/segundo 00–59, com ou sem hora
+  (`AAAA-MM-DD`, `AAAA-MM-DDThh:mm` ou `AAAA-MM-DDThh:mm:ss`) — em `inicio`, `de` e `ate`.
 
 **Revisão de 08/10/2026:** um evento sem `inicio` passava pelo build e, na página, derrubava o
 script inteiro (todas as seções em branco); um período sem `de` sumia em silêncio. Agora o

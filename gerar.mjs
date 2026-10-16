@@ -61,7 +61,9 @@ if (!dados || typeof dados !== 'object' || Array.isArray(dados)) {
 // Também confere que a data EXISTE no calendário: "2026-02-30" viraria 2 de março na
 // página e "2026-13-01" viraria "Invalid Date". E o `ate`, quando preenchido, tem o
 // mesmo formato (um "31/10/2026" ali mantinha o remédio fora de "hoje" para sempre).
-const DATA = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?)?$/;
+// Hora 00–23, minuto e segundo 00–59: "T99:99" passava e o contador normalizava para
+// outro dia (05/03 04:39) enquanto a linha do tempo mostrava 01/03.
+const DATA = /^\d{4}-\d{2}-\d{2}(T([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?)?$/;
 const dataReal = (t) => {
   if (typeof t !== 'string' || !DATA.test(t)) return false;
   const [a, m, d] = t.slice(0, 10).split('-').map(Number);
