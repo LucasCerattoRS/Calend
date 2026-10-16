@@ -72,7 +72,7 @@ const dataReal = (t) => {
   return x.getUTCFullYear() === a && x.getUTCMonth() === m - 1 && x.getUTCDate() === d;
 };
 const faltas = [];
-// Sem `nome` ou `dose` a página escreveria a palavra "undefined" no lugar do dado.
+// Sem `nome` a página escreveria a palavra "undefined" no lugar do dado.
 // Número (`"dose": 2`) é aceito: a página sempre o mostrou certo.
 const texto = (v) => (typeof v === 'string' && v.trim() !== '') || (typeof v === 'number' && Number.isFinite(v));
 (dados.eventos || []).forEach((ev, i) => {
@@ -83,7 +83,11 @@ const texto = (v) => (typeof v === 'string' && v.trim() !== '') || (typeof v ===
   if (!texto(m?.nome)) faltas.push(`medicamentos[${i}]: "nome" ausente ou vazio — texto (ou número) obrigatório`);
   (m?.periodos || []).forEach((p, j) => {
     const onde = `medicamentos[${i}].periodos[${j}] ("${m?.nome ?? '?'}")`;
-    if (!texto(p?.dose)) faltas.push(`${onde}: "dose" ausente ou vazia — texto (ou número) obrigatório`);
+    // Dose ainda não dita (ver `confirmar` no README) é legítima: período sem `dose`, com
+    // null ou "" vira texto vazio — a página mostra vazio em vez de "undefined" e o build
+    // continua aceitando o dados.json que já funcionava. Só tipo errado (true, {}, []) é recusado.
+    if (p && (p.dose === undefined || p.dose === null || p.dose === '')) p.dose = '';
+    else if (!texto(p?.dose)) faltas.push(`${onde}: "dose" inválida — use texto, número ou deixe vazia ("")`);
     if (!dataReal(p?.de)) faltas.push(`${onde}: "de" ausente ou inválido — use AAAA-MM-DD (data que exista)`);
     if (p?.ate && !dataReal(p.ate)) faltas.push(`${onde}: "ate" inválido — use AAAA-MM-DD ou null (em aberto)`);
     else if (p?.ate && dataReal(p?.de) && p.ate.slice(0, 10) < p.de.slice(0, 10)) faltas.push(`${onde}: "ate" (${p.ate}) é anterior a "de" (${p.de})`);

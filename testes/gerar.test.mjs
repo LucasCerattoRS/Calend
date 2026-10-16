@@ -96,13 +96,12 @@ test('dados.json com BOM UTF-8 é aceito', () => {
   assert.ok(r.gerou);
 });
 
-// Sem `nome` (evento ou remédio) ou sem `dose` (período), a página imprimia a palavra
-// "undefined" no lugar do dado. Melhor recusar no build, dizendo onde.
-test('evento/remédio sem nome e período sem dose são recusados', () => {
+// Sem `nome` (evento ou remédio) a página imprimia a palavra "undefined" no lugar do dado.
+// Melhor recusar no build, dizendo onde. Dose de tipo errado (true) também é recusada.
+test('evento/remédio sem nome e dose de tipo errado são recusados', () => {
   const casos = [
     [{ eventos: [{ inicio: '2026-03-01' }] }, /eventos\[0\].*"nome"/],
     [{ medicamentos: [{ periodos: [{ de: '2026-03-01', dose: '1' }] }] }, /medicamentos\[0\].*"nome"/],
-    [{ medicamentos: [{ nome: 'M', periodos: [{ de: '2026-03-01' }] }] }, /medicamentos\[0\]\.periodos\[0\].*"dose"/],
     [{ eventos: [{ nome: '  ', inicio: '2026-03-01' }] }, /eventos\[0\].*"nome"/],
     [{ medicamentos: [{ nome: 'M', periodos: [{ de: '2026-03-01', dose: true }] }] }, /"dose"/],
   ];
@@ -126,5 +125,18 @@ test('dose e nome numéricos continuam aceitos', () => {
     const r = gerar(dados);
     assert.equal(r.status, 0, `${JSON.stringify(dados)}\n${r.stderr}`);
     assert.ok(r.gerou);
+  }
+});
+
+// Dose ainda não dita (README: `confirmar`) é legítima. Período sem `dose`, com null ou ""
+// continua gerando a página (como no main), agora sem a palavra "undefined".
+test('período sem dose (ou vazia) continua aceito e não escreve "undefined"', () => {
+  for (const periodo of [{ de: '2026-03-01' }, { de: '2026-03-01', dose: null }, { de: '2026-03-01', dose: '' }]) {
+    const dados = { medicamentos: [{ nome: 'M', periodos: [periodo] }] };
+    const r = gerar(dados);
+    assert.equal(r.status, 0, `${JSON.stringify(dados)}\n${r.stderr}`);
+    assert.ok(r.gerou);
+    const html = fs.readFileSync(path.join(TMP, 'saida.html'), 'utf8');
+    assert.match(html, /"dose": ""/, 'dose deveria ser gravada como texto vazio');
   }
 });
