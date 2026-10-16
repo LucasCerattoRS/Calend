@@ -206,6 +206,13 @@ const hojeISO = isoDe(hoje);
 
 const diaDe = (iso) => { const [a, m, d] = iso.slice(0, 10).split('-').map(Number); return new Date(a, m - 1, d); };
 const DIA_MS = 86400000;
+// Só a parte AAAA-MM-DD: um `de`/`ate` com hora ("2026-03-01T08:00") não pode ser
+// comparado como texto com o dia de hoje, senão o remédio some no dia em que começa.
+const dia = (s) => String(s).slice(0, 10);
+// Tempo corrido pelo relógio de parede (sem UTC e sem salto de horário de verão):
+// diferença em ms entre os dois "relógios de parede". Assim 1 dia = 1 dia do calendário.
+const parede = (d) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds());
+const corrido = (de, ate) => Math.max(0, parede(ate) - parede(de));
 const diasEntre = (a, b) => Math.round((diaDe(b) - diaDe(a)) / DIA_MS);
 const fmtData = (iso) => diaDe(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 const fmtLongo = (iso) => diaDe(iso).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' });
@@ -260,7 +267,7 @@ function pintarContadores() {
   const evs = DADOS.eventos || [];
   if (!evs.length) { alvo.innerHTML = '<p class="muted">Nenhum evento registrado.</p>'; return; }
   alvo.innerHTML = evs.map((ev, i) => {
-    const dias = Math.floor(Math.max(0, agora - instante(ev.inicio)) / DIA_MS);
+    const dias = Math.floor(corrido(instante(ev.inicio), agora) / DIA_MS);
     const sem = Math.floor(dias / 7); const resto = dias % 7;
     const semTxt = sem >= 1
       ? ` · ${plural(sem, 'semana', 'semanas')}${resto ? ` e ${plural(resto, 'dia', 'dias')}` : ''}` : '';
@@ -287,7 +294,7 @@ function tique() {
   document.querySelectorAll('[data-vivo]').forEach((el) => {
     const ev = (DADOS.eventos || [])[Number(el.getAttribute('data-vivo'))];
     if (!ev) return;
-    const ms = Math.max(0, agora - instante(ev.inicio));
+    const ms = corrido(instante(ev.inicio), agora);
     const h = Math.floor(ms / 3600000) % 24;
     const mnt = Math.floor(ms / 60000) % 60;
     const s = Math.floor(ms / 1000) % 60;
@@ -296,7 +303,7 @@ function tique() {
 }
 
 // ---- o que vale HOJE ----
-const ativoEm = (p, iso) => p.de <= iso && (!p.ate || p.ate >= iso);
+const ativoEm = (p, iso) => dia(p.de) <= iso && (!p.ate || dia(p.ate) >= iso);
 const nomeCompleto = (m) => m.nome + (m.apresentacao ? ` ${m.apresentacao}` : '');
 
 function pintarHoje() {
@@ -325,8 +332,8 @@ function pintarHoje() {
         <li>
           <div class="linha">
             <span class="med">${esc(m.nome)}${m.apresentacao ? ` <span class="apres">${esc(m.apresentacao)}</span>` : ''}${
-              p.de === hojeISO ? '<span class="chip bom"><i></i>começa hoje</span>' : ''}${
-              p.ate === hojeISO ? '<span class="chip aviso"><i></i>último dia</span>' : ''}</span>
+              dia(p.de) === hojeISO ? '<span class="chip bom"><i></i>começa hoje</span>' : ''}${
+              p.ate && dia(p.ate) === hojeISO ? '<span class="chip aviso"><i></i>último dia</span>' : ''}</span>
             <span class="dose">${esc(p.dose)}</span>
           </div>
           ${p.nota ? `<div class="nota">${esc(p.nota)}</div>` : ''}
@@ -342,8 +349,8 @@ function mudancas() {
   for (const m of DADOS.medicamentos || []) {
     for (const p of m.periodos || []) {
       const base = { nome: nomeCompleto(m), detalhe: `${p.dose}${p.momento ? ` · ${p.momento}` : ''}`, cor: null };
-      evs.push({ data: p.de, tipo: 'inicio', ...base, nota: p.nota || null });
-      if (p.ate) evs.push({ data: p.ate, tipo: 'fim', ...base, nota: null });
+      evs.push({ data: dia(p.de), tipo: 'inicio', ...base, nota: p.nota || null });
+      if (p.ate) evs.push({ data: dia(p.ate), tipo: 'fim', ...base, nota: null });
     }
   }
   for (const ev of DADOS.eventos || []) {

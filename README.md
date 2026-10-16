@@ -195,29 +195,51 @@ Em uso real e estável. Tecnologias: HTML + CSS + JavaScript puro na página, No
 (só módulos nativos) no build, Bash no `sync-pendrive.sh`.
 
 ```bash
-node --test testes/gerar.test.mjs              # build: dado válido gera; data faltando é recusada
-node docs/estudo/harness-runtime.mjs           # roda o <script> da página em Node e mostra cada seção
+node --test testes/gerar.test.mjs testes/pagina.test.mjs   # build + página (relógio fixo, America/Sao_Paulo)
+node docs/estudo/harness-runtime.mjs                       # roda o <script> da página em Node e mostra cada seção
 ```
+
+O CI (`.github/workflows/testes.yml`) roda os mesmos comandos a cada push e PR.
+`testes/pagina.test.mjs` executa o `<script>` real do `template.html` com a data/hora
+**congeladas** e `TZ=America/Sao_Paulo`, então cobre virada de mês/ano, ano bissexto, último
+dia de uso e a virada do dia à meia-noite — o que decide se o remédio aparece em "hoje".
+
+**Revisão de 09/10/2026 (datas):**
+- `de` com hora (`2026-03-01T08:00`) fazia o remédio **sumir de "Hoje" no dia em que começa**
+  (comparação de texto com `AAAA-MM-DD`). A página agora compara só o dia.
+- `ate` não era validado: `10/03/2026` passava pelo build, gerava "Invalid Date" e tirava o
+  remédio de "Hoje". Agora o build recusa `ate` fora do formato, datas que não existem
+  (`2026-02-30`, `2027-02-29`) e `ate` anterior a `de`.
+- O contador usava milissegundos; início dentro do antigo horário de verão fazia o dia virar
+  1 h fora de hora. Agora conta pelo relógio de parede local.
 
 **Revisão de 08/10/2026:** um evento sem `inicio` passava pelo build e, na página, derrubava o
 script inteiro (todas as seções em branco); um período sem `de` sumia em silêncio. Agora o
 `gerar.mjs` recusa o dado e diz onde está o erro — caso **B4** do `CASOS-LIMITE.md`.
 
 **Pendências**
+- A página usa o **fuso do computador** que a abre, não fixa `America/Sao_Paulo`. Em máquina com
+  fuso errado, o "hoje" (e o remédio do dia) muda. Decisão pendente: fixar o fuso ou avisar na página.
+- A página só tem o **momento** (manhã/tarde/jantar/noite), não horário de relógio da dose.
+- `docs/estudo/codigo-comentado/` e os `*.explicado.md` ainda descrevem o código anterior a esta revisão.
 - `sync-pendrive.sh` só existe para Linux; no Windows a cópia pro pendrive é manual.
 
 ---
 
 ## 🎓 Para estudar
 
-1. **Datas em horário local, sem UTC** — `template.html`, funções `diaDe` e `instante`
-   (logo no começo do `<script>`): por que `new Date("2026-01-01")` adiantaria o contador.
+1. **Datas em horário local, sem UTC** — `template.html`, funções `diaDe`, `instante`, `dia` e
+   `corrido` (logo no começo do `<script>`): por que `new Date("2026-01-01")` adiantaria o contador,
+   por que datas ISO não se comparam como texto quando uma tem hora, e por que diferença em ms erra
+   com horário de verão.
 2. **Templating por marcador** — `gerar.mjs`, o `replace` com **função** no `/*DADOS*/…/*FIM*/`:
    por que uma string ali corromperia o JSON (`$&`, `$'`) e por que `</` é escapado.
 3. **View = f(estado)** — `template.html`, `pintarHoje` / `mudancas`: a página inteira é recalculada
    a partir do dado e de `new Date()`; nada de "dias decorridos" guardado.
 4. **Validar na fronteira** — `gerar.mjs`, bloco `faltas`: o erro aparece no build, com caminho
-   (`medicamentos[0].periodos[1]`), em vez de virar uma página em branco.
+   (`medicamentos[0].periodos[1]`), em vez de virar uma página em branco; `dataReal` confere que o dia existe.
+5. **Testar com relógio congelado** — `testes/pagina-runner.mjs`: `Date` substituído por uma subclasse
+   fixa dentro do `vm`, e `TZ` definido no processo filho — a única forma de testar datas de forma repetível.
 
 ---
 
