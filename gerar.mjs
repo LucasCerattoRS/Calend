@@ -96,6 +96,8 @@ lista(dados.medicamentos, '"medicamentos"').forEach((m, i) => {
     // Dose ainda não dita (ver `confirmar` no README) é legítima: período sem `dose`, com
     // null ou "" vira texto vazio — a página mostra vazio em vez de "undefined" e o build
     // continua aceitando o dados.json que já funcionava. Só tipo errado (true, {}, []) é recusado.
+    // Período que nem é objeto (true, 3, "x") não aceita `p.dose = ''` (TypeError): recusa antes.
+    if (p === null || typeof p !== 'object' || Array.isArray(p)) { faltas.push(`${onde}: precisa ser um objeto { de, ate, dose } (veio ${Array.isArray(p) ? 'lista' : p === null ? 'nulo' : tipo(p)})`); return; }
     if (p && (p.dose === undefined || p.dose === null || p.dose === '')) p.dose = '';
     else if (!texto(p?.dose)) faltas.push(`${onde}: "dose" inválida — use texto, número ou deixe vazia ("")`);
     if (!dataReal(p?.de)) faltas.push(`${onde}: "de" ausente ou inválido — use AAAA-MM-DD (data que exista)`);
@@ -145,6 +147,9 @@ for (const saida of saidas) {
     // nunca fica um Calendario.html pela metade.
     tmp = path.join(path.dirname(saida), `.${path.basename(saida)}.${process.pid}.tmp`);
     fs.writeFileSync(tmp, html, { encoding: 'utf8', flush: true });
+    // Página com dado de saúde: se o destino já existia com permissão restrita (0600), a nova herda;
+    // sem isto o temporário nasce com a umask (0644) e o rename abre a leitura a outros usuários.
+    try { fs.chmodSync(tmp, fs.statSync(saida).mode & 0o777); } catch { /* destino novo: fica a permissão padrão */ }
     fs.renameSync(tmp, saida);
     tmp = null;
     console.log(`Calendario.html gerado: ${saida}`);
