@@ -146,10 +146,12 @@ for (const saida of saidas) {
     // Se faltar espaço ou o pendrive sair no meio, a página anterior continua inteira —
     // nunca fica um Calendario.html pela metade.
     tmp = path.join(path.dirname(saida), `.${path.basename(saida)}.${process.pid}.tmp`);
-    fs.writeFileSync(tmp, html, { encoding: 'utf8', flush: true });
-    // Página com dado de saúde: se o destino já existia com permissão restrita (0600), a nova herda;
-    // sem isto o temporário nasce com a umask (0644) e o rename abre a leitura a outros usuários.
-    try { fs.chmodSync(tmp, fs.statSync(saida).mode & 0o777); } catch { /* destino novo: fica a permissão padrão */ }
+    // Página com dado de saúde: se o destino já existe com permissão restrita (0600), o temporário já NASCE com ela
+    // (sem janela 0644 legível por outros) e a troca não acontece se não der pra aplicá-la. Destino novo: permissão padrão.
+    let modo;
+    try { modo = fs.statSync(saida).mode & 0o777; } catch (e) { if (e.code !== 'ENOENT') throw e; }
+    fs.writeFileSync(tmp, html, { encoding: 'utf8', flush: true, mode: modo });
+    if (modo !== undefined) fs.chmodSync(tmp, modo); // a umask pode ter tirado bits de `mode`
     fs.renameSync(tmp, saida);
     tmp = null;
     console.log(`Calendario.html gerado: ${saida}`);
