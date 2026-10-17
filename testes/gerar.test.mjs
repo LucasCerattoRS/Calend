@@ -223,10 +223,13 @@ test('período que não é objeto (true) vira erro de validação, não TypeErro
 test('regerar por cima de um HTML 0600 mantém a permissão restrita', { skip: process.platform === 'win32' }, () => {
   const dados = { eventos: [{ nome: 'E', inicio: '2000-01-01T00:00' }] };
   const saida = path.join(TMP, 'saida.html');
-  gerar(dados);
-  fs.chmodSync(saida, 0o600);
-  const entrada = path.join(TMP, 'dados.json');
-  const r = spawnSync(process.execPath, [GERAR, entrada, saida], { encoding: 'utf8' });
-  assert.equal(r.status, 0, r.stderr);
-  assert.equal(fs.statSync(saida).mode & 0o777, 0o600);
+  const umaskAntes = process.umask(0o022); // o filho herda: com 022 o temporário nasceria 0644 sem a correção
+  try {
+    gerar(dados);
+    fs.chmodSync(saida, 0o600);
+    const entrada = path.join(TMP, 'dados.json');
+    const r = spawnSync(process.execPath, [GERAR, entrada, saida], { encoding: 'utf8' });
+    assert.equal(r.status, 0, r.stderr);
+    assert.equal(fs.statSync(saida).mode & 0o777, 0o600);
+  } finally { process.umask(umaskAntes); }
 });
