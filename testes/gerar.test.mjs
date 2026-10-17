@@ -211,3 +211,22 @@ test('dois destinos: falha no segundo não estraga o primeiro nem deixa .tmp', (
   assert.deepEqual(sobras(app), []);
   assert.deepEqual(sobras(pen), []);
 });
+
+test('período que não é objeto (true) vira erro de validação, não TypeError', () => {
+  const r = gerar({ medicamentos: [{ nome: 'M', periodos: [true] }] });
+  assert.equal(r.status, 1);
+  assert.ok(!r.gerou);
+  assert.match(r.stderr, /periodos\[0\].*objeto/);
+  assert.doesNotMatch(r.stderr, /TypeError/);
+});
+
+test('regerar por cima de um HTML 0600 mantém a permissão restrita', { skip: process.platform === 'win32' }, () => {
+  const dados = { eventos: [{ nome: 'E', inicio: '2000-01-01T00:00' }] };
+  const saida = path.join(TMP, 'saida.html');
+  gerar(dados);
+  fs.chmodSync(saida, 0o600);
+  const entrada = path.join(TMP, 'dados.json');
+  const r = spawnSync(process.execPath, [GERAR, entrada, saida], { encoding: 'utf8' });
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(fs.statSync(saida).mode & 0o777, 0o600);
+});
