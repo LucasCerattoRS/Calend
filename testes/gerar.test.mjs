@@ -195,6 +195,30 @@ test('saída igual à entrada preserva o JSON e retorna erro', () => {
   assert.deepEqual(sobras(dir), []);
 });
 
+test('temporário preexistente não é seguido, sobrescrito nem removido', { skip: process.platform === 'win32' }, () => {
+  const dir = fs.mkdtempSync(path.join(TMP, 'temporario-ocupado-'));
+  const entrada = path.join(dir, 'dados.json');
+  const saida = path.join(dir, 'saida.html');
+  const alvo = path.join(dir, 'outro.txt');
+  fs.writeFileSync(entrada, JSON.stringify(VALIDO));
+  fs.writeFileSync(saida, 'PÁGINA ANTERIOR');
+  fs.writeFileSync(alvo, 'CONTEÚDO PRESERVADO');
+  const script = `
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const [gerar, entrada, saida, alvo] = process.argv.slice(1);
+    fs.symlinkSync(alvo, path.join(path.dirname(saida), '.saida.html.' + process.pid + '.tmp'));
+    process.argv = [process.execPath, gerar, entrada, saida];
+    import(require('node:url').pathToFileURL(gerar).href);
+  `;
+  const r = spawnSync(process.execPath, ['-e', script, GERAR, entrada, saida, alvo], { encoding: 'utf8' });
+  assert.ok(fs.readFileSync(alvo, 'utf8') === 'CONTEÚDO PRESERVADO', 'o link não pode causar escrita em outro arquivo');
+  assert.equal(r.status, 1, r.stderr);
+  assert.equal(fs.readFileSync(saida, 'utf8'), 'PÁGINA ANTERIOR');
+  assert.equal(sobras(dir).length, 1, 'o temporário de terceiros não deve ser removido');
+  assert.ok(fs.lstatSync(path.join(dir, sobras(dir)[0])).isSymbolicLink());
+});
+
 // Escrita não atômica: o writeFileSync trunca o arquivo antes de gravar, então uma falha no
 // meio (disco cheio, pendrive arrancado) deixava a página pela metade. Simulado com limite de
 // tamanho de arquivo (ulimit -f): no código antigo o Calendario.html ficava com 2048 bytes.

@@ -154,7 +154,12 @@ for (const saida of saidas) {
     // (sem janela 0644 legível por outros) e a troca não acontece se não der pra aplicá-la. Destino novo: permissão padrão.
     let modo;
     try { modo = fs.statSync(saida).mode & 0o777; } catch (e) { if (e.code !== 'ENOENT') throw e; }
-    fs.writeFileSync(tmp, html, { encoding: 'utf8', flush: true, mode: modo });
+    try {
+      fs.writeFileSync(tmp, html, { encoding: 'utf8', flush: true, mode: modo, flag: 'wx' });
+    } catch (e) {
+      if (e.code === 'EEXIST') tmp = null; // pertence a outro processo; não remover
+      throw e;
+    }
     if (modo !== undefined) fs.chmodSync(tmp, modo); // a umask pode ter tirado bits de `mode`
     fs.renameSync(tmp, saida);
     tmp = null;
