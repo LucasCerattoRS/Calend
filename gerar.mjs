@@ -142,6 +142,9 @@ let geradas = 0;
 for (const saida of saidas) {
   let tmp = null;
   try {
+    if (fs.existsSync(saida) && fs.realpathSync(saida) === fs.realpathSync(entrada)) {
+      throw new Error('a saída não pode sobrescrever o arquivo de entrada');
+    }
     fs.mkdirSync(path.dirname(saida), { recursive: true });
     // Escrita atômica: grava num temporário NA MESMA PASTA e só então renomeia por cima.
     // Se faltar espaço ou o pendrive sair no meio, a página anterior continua inteira —
