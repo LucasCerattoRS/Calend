@@ -153,6 +153,28 @@
   footer code { background: var(--superficie); border: 1px solid var(--linha);
                 border-radius: 5px; padding: 1px 5px; font-size: .92em; }
 
+
+  /* ---- calendário mensal ---- */
+  .cal-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+  .cal-topo b { font-size: 1rem; }
+  .cal-topo button, .btn-ics { font: inherit; font-size: .82rem; color: var(--ink); background: var(--plano);
+        border: 1px solid var(--borda); border-radius: 8px; padding: 6px 12px; cursor: pointer; min-height: 36px; }
+  .cal-grade { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal-grade .sem { text-align: center; font-size: .7rem; color: var(--mudo); text-transform: uppercase; letter-spacing: .06em; }
+  .cal-grade .dia { min-height: 48px; border: 1px solid var(--linha); border-radius: 8px; padding: 3px 5px;
+        font-size: .82rem; font-variant-numeric: tabular-nums; }
+  .cal-grade .dia.fora { border-color: transparent; }
+  .cal-grade .dia.hoje { border: 2px solid var(--ink); font-weight: 700; }
+  .cal-grade .dia.dom { color: var(--mudo); }
+  .cal-grade .dia.feriado { background: color-mix(in srgb, var(--ev-rosa) 14%, transparent); }
+  .pontos { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 3px; }
+  .pontos i { width: 7px; height: 7px; border-radius: 50%; background: var(--cor); }
+  .cal-lista { list-style: none; margin: 14px 0 0; padding: 0; font-size: .875rem; }
+  .cal-lista li { display: flex; gap: 10px; padding: 4px 0; border-top: 1px solid var(--linha); }
+  .cal-lista .q { min-width: 3.2rem; color: var(--mudo); font-variant-numeric: tabular-nums; }
+  .cal-lista i { width: 8px; height: 8px; border-radius: 50%; background: var(--cor); flex: none; margin-top: .5em; }
+  .cal-leg { color: var(--mudo); font-size: .75rem; margin-top: 10px; }
+
   @media (prefers-reduced-motion: reduce) { .medidor .fill { transition: none; } }
   @media print {
     :root { --plano: #fff; --superficie: #fff; --ink: #000; --ink2: #444;
@@ -174,6 +196,11 @@
   <section>
     <h2>Contagem</h2>
     <div class="tiles" id="contadores"></div>
+  </section>
+
+  <section>
+    <h2>Calendário</h2>
+    <div class="card" id="calendario"></div>
   </section>
 
   <div class="duplo">
@@ -433,6 +460,119 @@ function pintarPendencias() {
     </div>`;
 }
 
+// ---- calendário: feriados, eventos, datas pessoais e remédios no mesmo mês ----
+const pad2 = (n) => String(n).padStart(2, '0');
+const mkISO = (a, m, d) => `${a}-${pad2(m)}-${pad2(d)}`;
+// Soma dias em UTC puro: horário de verão não desloca o dia.
+const somaDias = (iso, n) => { const [a, m, d] = iso.split('-').map(Number); return isoUTC(new Date(Date.UTC(a, m - 1, d + n))); };
+const isoUTC = (x) => mkISO(x.getUTCFullYear(), x.getUTCMonth() + 1, x.getUTCDate());
+const bissexto = (a) => (a % 4 === 0 && a % 100 !== 0) || a % 400 === 0;
+
+// Páscoa (algoritmo gregoriano anônimo). Carnaval, Sexta Santa e Corpus Christi derivam dela.
+function pascoa(a) {
+  const g = a % 19, c = Math.floor(a / 100), h = (c - Math.floor(c / 4) - Math.floor((8 * c + 13) / 25) + 19 * g + 15) % 30;
+  const i = h - Math.floor(h / 28) * (1 - Math.floor(29 / (h + 1)) * Math.floor((21 - g) / 11));
+  const j = (a + Math.floor(a / 4) + i + 2 - c + Math.floor(c / 4)) % 7;
+  const l = i - j, m = 3 + Math.floor((l + 40) / 44), d = l + 28 - 31 * Math.floor(m / 4);
+  return mkISO(a, m, d);
+}
+// Nacionais + Dia do Gaúcho (RS). Carnaval e Corpus Christi são ponto facultativo por lei, mas
+// feriado na prática; ficam marcados porque o objetivo é ver tudo no mês.
+function feriados(a) {
+  const p = pascoa(a);
+  return [
+    [mkISO(a, 1, 1), 'Confraternização Universal'], [somaDias(p, -48), 'Carnaval'], [somaDias(p, -47), 'Carnaval'],
+    [somaDias(p, -2), 'Sexta-feira Santa'], [p, 'Páscoa'], [mkISO(a, 4, 21), 'Tiradentes'],
+    [mkISO(a, 5, 1), 'Dia do Trabalho'], [somaDias(p, 60), 'Corpus Christi'], [mkISO(a, 9, 7), 'Independência'],
+    [mkISO(a, 9, 20), 'Dia do Gaúcho (RS)'], [mkISO(a, 10, 12), 'Nossa Senhora Aparecida'], [mkISO(a, 11, 2), 'Finados'],
+    [mkISO(a, 11, 15), 'Proclamação da República'], [mkISO(a, 11, 20), 'Consciência Negra'], [mkISO(a, 12, 25), 'Natal'],
+  ].map(([data, nome]) => ({ data, nome, tipo: 'feriado' }));
+}
+const aniversario = (iso, a) => { // 29/02 cai em 28/02 nos anos sem dia 29
+  const [, m, d] = iso.split('-').map(Number);
+  return mkISO(a, m, m === 2 && d === 29 && !bissexto(a) ? 28 : d);
+};
+
+// Tudo que marca o calendário em [a0, a1] (anos). `saude: false` deixa os remédios de fora (ICS).
+function marcas(a0, a1, saude = true) {
+  const out = [];
+  for (let a = a0; a <= a1; a++) out.push(...feriados(a));
+  for (const ev of DADOS.eventos || []) {
+    const ini = ev.inicio.slice(0, 10), a = Number(ini.slice(0, 4));
+    out.push({ data: ini, nome: ev.nome, tipo: 'evento', cor: ev.cor });
+    for (let y = Math.max(a0, a + 1); y <= a1; y++) out.push({ data: aniversario(ini, y), nome: `${ev.nome}: ${y - a} ${y - a === 1 ? 'ano' : 'anos'}`, tipo: 'evento', cor: ev.cor });
+    for (const m of MARCOS) out.push({ data: somaDias(ini, m), nome: `${ev.nome}: ${m} dias`, tipo: 'marco', cor: ev.cor });
+  }
+  for (const d of DADOS.datas || []) {
+    if (d.repete !== 'anual') { out.push({ data: d.data.slice(0, 10), nome: d.nome, tipo: 'data', cor: d.cor }); continue; }
+    const a = Number(d.data.slice(0, 4));
+    for (let y = Math.max(a0, a); y <= a1; y++) out.push({ data: aniversario(d.data.slice(0, 10), y), nome: d.nome, tipo: 'data', cor: d.cor });
+  }
+  if (saude) for (const m of DADOS.medicamentos || []) for (const p of m.periodos || []) {
+    out.push({ data: dia(p.de), nome: `começa ${nomeCompleto(m)}`, tipo: 'remedio' });
+    if (p.ate) out.push({ data: dia(p.ate), nome: `último dia de ${nomeCompleto(m)}`, tipo: 'remedio' });
+  }
+  return out.filter((x) => Number(x.data.slice(0, 4)) >= a0 && Number(x.data.slice(0, 4)) <= a1)
+    .sort((x, y) => x.data.localeCompare(y.data));
+}
+const COR_TIPO = { feriado: 'var(--ev-rosa)', evento: 'var(--ev-verde)', marco: 'var(--ev-verde)', data: 'var(--ev-ciano)', remedio: 'var(--mudo)' };
+const corMarca = (m) => (m.tipo === 'feriado' || m.tipo === 'remedio' || !m.cor ? COR_TIPO[m.tipo] : corDe(m.cor));
+
+let mesVisto = hoje.getFullYear() * 12 + hoje.getMonth();
+function mudarMes(delta) { mesVisto = delta === 0 ? hoje.getFullYear() * 12 + hoje.getMonth() : mesVisto + delta; pintarCalendario(); }
+
+function pintarCalendario() {
+  const a = Math.floor(mesVisto / 12), m = mesVisto % 12;
+  const pref = `${a}-${pad2(m + 1)}-`;
+  const doMes = marcas(a, a).filter((x) => x.data.startsWith(pref));
+  const porDia = new Map();
+  for (const x of doMes) { if (!porDia.has(x.data)) porDia.set(x.data, []); porDia.get(x.data).push(x); }
+  const primeiro = new Date(a, m, 1).getDay(), n = new Date(a, m + 1, 0).getDate();
+  let cel = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'].map((s) => `<div class="sem">${s}</div>`).join('');
+  for (let i = 0; i < primeiro; i++) cel += '<div class="dia fora"></div>';
+  for (let d = 1; d <= n; d++) {
+    const iso = pref + pad2(d), ms = porDia.get(iso) || [];
+    const cls = ['dia', iso === hojeISO && 'hoje', (primeiro + d - 1) % 7 === 0 && 'dom', ms.some((x) => x.tipo === 'feriado') && 'feriado'].filter(Boolean).join(' ');
+    cel += `<div class="${cls}"><span>${d}</span><div class="pontos">${ms.map((x) => `<i style="--cor:${corMarca(x)}" title="${esc(x.nome)}"></i>`).join('')}</div></div>`;
+  }
+  const titulo = cap(new Date(a, m, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }));
+  document.getElementById('calendario').innerHTML = `
+    <div class="cal-topo"><button type="button" onclick="mudarMes(-1)" aria-label="Mês anterior">‹</button>
+      <b>${titulo}</b>
+      <span><button type="button" onclick="mudarMes(0)">Hoje</button> <button type="button" onclick="mudarMes(1)" aria-label="Próximo mês">›</button></span></div>
+    <div class="cal-grade">${cel}</div>
+    <ul class="cal-lista">${doMes.length ? doMes.map((x) => `<li><span class="q">${x.data.slice(8)}/${x.data.slice(5, 7)}</span><i style="--cor:${corMarca(x)}"></i><span>${esc(x.nome)}</span></li>`).join('')
+      : '<li class="muted">Nada marcado neste mês.</li>'}</ul>
+    <p class="cal-leg">Rosa: feriado · verde: eventos e marcos · azul: suas datas · cinza: remédios.</p>
+    <button type="button" class="btn-ics" onclick="baixarICS()">Exportar .ics (sem remédios)</button>`;
+}
+
+// .ics com feriados, eventos e datas (3 anos pra trás, 5 pra frente). Remédio fica de fora:
+// é dado de saúde e o arquivo vai parar em agenda de nuvem.
+const icsTxt = (s) => String(s).replace(/\\/g, '\\\\').replace(/;/g, '\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+function gerarICS() {
+  const y = hoje.getFullYear(), carimbo = isoDe(hoje).replace(/-/g, '') + 'T000000Z';
+  const linhas = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Calendario//PT-BR//', 'CALSCALE:GREGORIAN'];
+  marcas(y - 3, y + 5, false).forEach((x, i) => {
+    const d = x.data.replace(/-/g, '');
+    linhas.push('BEGIN:VEVENT', `UID:${d}-${i}@calendario.local`, `DTSTAMP:${carimbo}`,
+      `DTSTART;VALUE=DATE:${d}`, `DTEND;VALUE=DATE:${somaDias(x.data, 1).replace(/-/g, '')}`,
+      `SUMMARY:${icsTxt(x.nome)}`, 'END:VEVENT');
+  });
+  linhas.push('END:VCALENDAR');
+  return linhas.map((l) => { // dobra linhas longas (RFC 5545: 75 octetos)
+    const partes = []; let r = l;
+    while (r.length > 60) { partes.push(r.slice(0, 60)); r = ' ' + r.slice(60); }
+    return [...partes, r].join('\r\n');
+  }).join('\r\n') + '\r\n';
+}
+function baixarICS() {
+  const url = URL.createObjectURL(new Blob([gerarICS()], { type: 'text/calendar;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = 'calendario.ics'; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 pintarContadores();
 tique();
 setInterval(tique, 1000);
@@ -440,6 +580,7 @@ pintarHoje();
 pintarProximas();
 pintarHistorico();
 pintarPendencias();
+pintarCalendario();
 </script>
 </body>
 </html>

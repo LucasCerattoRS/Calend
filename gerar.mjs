@@ -99,6 +99,15 @@ lista(dados.eventos, '"eventos"').forEach((ev, i) => {
   for (const campo of ['obs', 'cor']) textoOpcional(ev?.[campo], `eventos[${i}].${campo}`);
   if (!dataReal(ev?.inicio)) faltas.push(`eventos[${i}] ("${nome}"): "inicio" ausente ou inválido — use AAAA-MM-DD ou AAAA-MM-DDThh:mm (data que exista)`);
 });
+// `datas`: marcos pessoais no calendário (aniversário, vencimento…). `repete: "anual"`
+// faz a data valer todo ano; sem ele vale só naquele dia.
+lista(dados.datas, '"datas"').forEach((d, i) => {
+  const nome = texto(d?.nome) ? d.nome : '?';
+  if (!texto(d?.nome)) faltas.push(`datas[${i}]: "nome" ausente ou vazio — texto (ou número) obrigatório`);
+  for (const campo of ['obs', 'cor']) textoOpcional(d?.[campo], `datas[${i}].${campo}`);
+  if (!dataReal(d?.data)) faltas.push(`datas[${i}] ("${nome}"): "data" ausente ou inválida — use AAAA-MM-DD (data que exista)`);
+  if (d?.repete != null && d.repete !== 'anual') faltas.push(`datas[${i}] ("${nome}"): "repete" só aceita "anual" (ou omita)`);
+});
 lista(dados.medicamentos, '"medicamentos"').forEach((m, i) => {
   const nome = texto(m?.nome) ? m.nome : '?';
   if (!texto(m?.nome)) faltas.push(`medicamentos[${i}]: "nome" ausente ou vazio — texto (ou número) obrigatório`);

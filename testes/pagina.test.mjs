@@ -93,3 +93,53 @@ test('início na meia-noite suprimida pelo horário de verão preserva a hora de
   assert.match(pagina(ev, '2018-11-05T00:00:00-02:00').contadores, /E 1 dia/);
   assert.match(pagina(ev, '2018-11-05T00:30:00-02:00').contadores, /E 1 dia/);
 });
+
+// ---- calendário mensal, feriados e .ics ----
+const SEM = { eventos: [], medicamentos: [] };
+
+test('calendário marca feriados móveis a partir da Páscoa (2026: Páscoa 05/04)', () => {
+  const abr = pagina(SEM, '2026-04-10T12:00:00-03:00').calendario;
+  assert.match(abr, /03\/04 Sexta-feira Santa/);
+  assert.match(abr, /05\/04 Páscoa/);
+  assert.match(abr, /21\/04 Tiradentes/);
+  const fev = pagina(SEM, '2026-02-10T12:00:00-03:00').calendario;
+  assert.match(fev, /16\/02 Carnaval/);
+  assert.match(fev, /17\/02 Carnaval/);
+  assert.match(pagina(SEM, '2026-06-10T12:00:00-03:00').calendario, /04\/06 Corpus Christi/);
+});
+
+test('calendário mostra evento, aniversário do evento, marco em dias e data pessoal anual', () => {
+  const dados = {
+    eventos: [{ nome: 'Trabalho na Msul Móveis', inicio: '2023-03-01', cor: 'verde' }],
+    datas: [{ nome: 'Vence o domínio', data: '2020-10-06', repete: 'anual' }, { nome: 'Prova única', data: '2026-03-10' }],
+  };
+  const mar = pagina(dados, '2026-03-15T12:00:00-03:00').calendario;
+  assert.match(mar, /01\/03 Trabalho na Msul Móveis: 3 anos/);
+  assert.match(mar, /10\/03 Prova única/);
+  assert.match(pagina(dados, '2023-03-15T12:00:00-03:00').calendario, /01\/03 Trabalho na Msul Móveis/);
+  assert.match(pagina(dados, '2027-10-15T12:00:00-03:00').calendario, /06\/10 Vence o domínio/);
+  assert.doesNotMatch(pagina(dados, '2027-03-15T12:00:00-03:00').calendario, /Prova única/);
+});
+
+test('data anual de 29/02 cai em 28/02 nos anos sem dia 29', () => {
+  const dados = { datas: [{ nome: 'Bissexta', data: '2024-02-29', repete: 'anual' }] };
+  assert.match(pagina(dados, '2027-02-10T12:00:00-03:00').calendario, /28\/02 Bissexta/);
+  assert.match(pagina(dados, '2028-02-10T12:00:00-03:00').calendario, /29\/02 Bissexta/);
+});
+
+test('.ics tem feriados, eventos e datas, e NÃO tem remédio (dado de saúde)', () => {
+  const dados = {
+    eventos: [{ nome: 'Msul', inicio: '2023-03-01' }],
+    medicamentos: [{ nome: 'RemSecreto', periodos: [{ de: '2026-01-01', ate: null, dose: '1' }] }],
+  };
+  const f = path.join(TMP, 'ics.json');
+  fs.writeFileSync(f, JSON.stringify(dados));
+  const r = spawnSync(process.execPath, [RUNNER, f, '2026-03-15T12:00:00-03:00'], { encoding: 'utf8', env: { ...process.env, TZ: 'America/Sao_Paulo', ICS: '1' } });
+  assert.equal(r.status, 0, r.stderr);
+  const ics = JSON.parse(r.stdout).ics.replace(/\r\n /g, '');
+  assert.match(ics, /^BEGIN:VCALENDAR\r\n/);
+  assert.match(ics, /SUMMARY:Natal/);
+  assert.match(ics, /SUMMARY:Msul/);
+  assert.match(ics, /DTSTART;VALUE=DATE:20230301/);
+  assert.doesNotMatch(ics, /RemSecreto/);
+});

@@ -112,6 +112,9 @@ próprio arquivo:
   "eventos": [
     { "nome": "Sobriedade", "inicio": "2000-01-01T00:00", "cor": "verde" }
   ],
+  "datas": [
+    { "nome": "Vencimento de exemplo", "data": "2000-06-15", "repete": "anual", "cor": "ciano" }
+  ],
   "medicamentos": [
     {
       "nome": "Remédio de exemplo",
@@ -131,6 +134,8 @@ próprio arquivo:
 |---|---|
 | `eventos[].inicio` | Data-hora de início do contador. A página mostra dias corridos, semanas e o próximo **marco** (7, 30, 90, 365 dias…). |
 | `eventos[].cor` | `verde`, `ciano` ou `rosa` — identifica visualmente o contador. |
+| `datas[]` | Marcos pessoais no calendário: `{ "nome": "…", "data": "AAAA-MM-DD", "repete": "anual", "cor": "ciano" }`. `repete` é opcional; sem ele vale só naquele dia. 29/02 anual cai em 28/02 nos anos sem dia 29. |
+| calendário | Grade mensal com feriados nacionais (Páscoa, Carnaval, Corpus Christi calculados) e Dia do Gaúcho (RS), mais eventos, aniversários de evento, marcos em dias, `datas` e início/fim de remédio. O botão **Exportar .ics** gera `calendario.ics` para Google Agenda/celular, **sem remédios** (dado de saúde). |
 | `medicamentos[].periodos` | **É o período que manda.** "O que tomo hoje" = filtrar quem tem `de ≤ hoje ≤ ate`. `ate: null` = em aberto. |
 | — desmame | Mesmo remédio, dois períodos com doses diferentes. A troca aparece em "Próximas" antes e no "Histórico" depois — automaticamente. |
 | `confirmar` | O que ficou em aberto (dose não dita, término indefinido). Vira aviso amarelo — **a página nunca inventa valores**. |

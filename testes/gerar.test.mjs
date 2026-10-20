@@ -349,3 +349,11 @@ test('regerar por cima de um HTML 0600 mantém a permissão restrita', { skip: p
     assert.equal(fs.statSync(saida).mode & 0o777, 0o600);
   } finally { process.umask(umaskAntes); }
 });
+
+test('datas: recusa data inexistente, nome vazio e repete inválido', () => {
+  const r = gerar({ datas: [{ nome: '', data: '2026-02-30' }, { nome: 'x', data: '2026-01-01', repete: 'mensal' }] });
+  assert.notEqual(r.status, 0);
+  assert.match(r.stderr, /datas\[0\]: "nome"/);
+  assert.match(r.stderr, /datas\[0\].*"data" ausente ou inválida/);
+  assert.match(r.stderr, /datas\[1\].*"repete"/);
+});

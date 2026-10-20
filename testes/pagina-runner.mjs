@@ -24,7 +24,7 @@ const el = (id) => (els[id] ??= { innerHTML: '', textContent: '', querySelectorA
 const intervalos = [];
 const ctx = {
   Date: DataFixa,
-  document: { getElementById: el, querySelectorAll: () => [] },
+  document: { getElementById: el, createElement: () => ({}), querySelectorAll: () => [] },
   location: { reload() {} },
   setInterval: (fn) => intervalos.push(fn),
   requestAnimationFrame: () => 0,
@@ -37,7 +37,8 @@ if (process.argv[4]) {
 }
 const texto = (h) => h.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 const saida = {};
-for (const id of ['hoje', 'contadores', 'hojeMed', 'proximas', 'historico']) {
+for (const id of ['hoje', 'contadores', 'hojeMed', 'proximas', 'historico', 'calendario']) {
   saida[id] = texto((els[id]?.innerHTML) || els[id]?.textContent || '');
 }
+if (process.env.ICS) saida.ics = ctx.gerarICS();
 console.log(JSON.stringify(saida));

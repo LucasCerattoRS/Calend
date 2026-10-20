@@ -10,6 +10,10 @@
     }
   ],
 
+  "datas": [
+    { "nome": "Vencimento de exemplo", "data": "2000-06-15", "repete": "anual", "cor": "ciano", "obs": "repete: anual faz valer todo ano; sem ele vale só naquele dia." }
+  ],
+
   "medicamentos": [
     {
       "nome": "Remédio de exemplo",
