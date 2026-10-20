@@ -87,3 +87,9 @@ test('independe do fuso do computador: parede local, não UTC', () => {
   const dados = med({ de: '2026-02-28', ate: '2026-02-28' });
   assert.match(pagina(dados, '2026-02-28T23:30:00-03:00').hojeMed, /Rem/);
 });
+
+test('início na meia-noite suprimida pelo horário de verão preserva a hora de parede', () => {
+  const ev = { eventos: [{ nome: 'E', inicio: '2018-11-04T00:00' }] };
+  assert.match(pagina(ev, '2018-11-05T00:00:00-02:00').contadores, /E 1 dia/);
+  assert.match(pagina(ev, '2018-11-05T00:30:00-02:00').contadores, /E 1 dia/);
+});
