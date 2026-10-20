@@ -261,8 +261,10 @@ function marcoDe(dias) {
   return { prox, faltam: prox - dias, frac: (dias - prev) / (prox - prev) };
 }
 
+let ultimaPintura;
 function pintarContadores() {
   const agora = new Date();
+  ultimaPintura = agora;
   const alvo = document.getElementById('contadores');
   const evs = DADOS.eventos || [];
   if (!evs.length) { alvo.innerHTML = '<p class="muted">Nenhum evento registrado.</p>'; return; }
@@ -291,6 +293,10 @@ function pintarContadores() {
 function tique() {
   const agora = new Date();
   if (isoDe(agora) !== hojeISO) { location.reload(); return; }
+  if ((DADOS.eventos || []).some((ev) => {
+    const inicio = instante(ev.inicio);
+    return Math.floor(corrido(inicio, agora) / DIA_MS) !== Math.floor(corrido(inicio, ultimaPintura) / DIA_MS);
+  })) pintarContadores();
   document.querySelectorAll('[data-vivo]').forEach((el) => {
     const ev = (DADOS.eventos || [])[Number(el.getAttribute('data-vivo'))];
     if (!ev) return;
