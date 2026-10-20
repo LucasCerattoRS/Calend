@@ -212,7 +212,7 @@ const dia = (s) => String(s).slice(0, 10);
 // Tempo corrido pelo relógio de parede (sem UTC e sem salto de horário de verão):
 // diferença em ms entre os dois "relógios de parede". Assim 1 dia = 1 dia do calendário.
 const parede = (d) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds());
-const corrido = (de, ate) => Math.max(0, parede(ate) - parede(de));
+const corrido = (de, ate) => Math.max(0, parede(ate) - de);
 const diasEntre = (a, b) => Math.round((diaDe(b) - diaDe(a)) / DIA_MS);
 const fmtData = (iso) => diaDe(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 const fmtLongo = (iso) => diaDe(iso).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' });
@@ -220,14 +220,13 @@ const mesCurto = (iso) => diaDe(iso).toLocaleDateString('pt-BR', { month: 'short
 const plural = (n, s, p) => `${n} ${n === 1 ? s : p}`;
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
-// Instante local a partir de "AAAA-MM-DD" ou "AAAA-MM-DDThh:mm". Construído por
-// componentes de propósito: new Date("AAAA-MM-DD") leria como UTC e adiantaria o
-// contador algumas horas; assim, com ou sem hora, o horário é sempre o local.
+// Componentes do início em uma escala de parede, sem aplicar transições de fuso.
+// Uma meia-noite suprimida pelo horário de verão não pode virar 01:00 aqui.
 const instante = (s) => {
   const [f, h = ''] = String(s).split('T');
   const [a, m, d] = f.split('-').map(Number);
   const [hh = 0, mn = 0, sg = 0] = h.split(':').map(Number);
-  return new Date(a, (m || 1) - 1, d || 1, hh, mn, sg);
+  return Date.UTC(a, (m || 1) - 1, d || 1, hh, mn, sg);
 };
 
 // O dado é texto de saúde escrito à mão. Escapar antes do innerHTML: um "<" numa
