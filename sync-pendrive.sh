@@ -50,4 +50,6 @@ EOF
 
 echo "Código do Calendário registrado em: $DESTINO/codigo"
 ls -la "$DESTINO" | sed 's/^/  /'
-[[ -e "$DESTINO/dados.json" ]] && echo "  (dados.json existente foi preservado)"
+if [[ -e "$DESTINO/dados.json" ]]; then
+  echo "  (dados.json existente foi preservado)"
+fi
