@@ -183,6 +183,18 @@ test('falha em todos os destinos retorna erro sem anunciar página disponível',
   assert.deepEqual(sobras(dir), []);
 });
 
+test('saída igual à entrada preserva o JSON e retorna erro', () => {
+  const dir = fs.mkdtempSync(path.join(TMP, 'entrada-saida-'));
+  const entrada = path.join(dir, 'dados.json');
+  const original = JSON.stringify(VALIDO);
+  fs.writeFileSync(entrada, original);
+  const r = spawnSync(process.execPath, [GERAR, entrada, path.join(dir, '.', 'dados.json')], { encoding: 'utf8' });
+  assert.equal(fs.readFileSync(entrada, 'utf8'), original, 'a entrada não pode virar HTML');
+  assert.equal(r.status, 1, r.stderr);
+  assert.match(r.stderr, /entrada|dados\.json/);
+  assert.deepEqual(sobras(dir), []);
+});
+
 // Escrita não atômica: o writeFileSync trunca o arquivo antes de gravar, então uma falha no
 // meio (disco cheio, pendrive arrancado) deixava a página pela metade. Simulado com limite de
 // tamanho de arquivo (ulimit -f): no código antigo o Calendario.html ficava com 2048 bytes.
