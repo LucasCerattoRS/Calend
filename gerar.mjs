@@ -75,6 +75,11 @@ const faltas = [];
 // Sem `nome` a página escreveria a palavra "undefined" no lugar do dado.
 // Número (`"dose": 2`) é aceito: a página sempre o mostrou certo.
 const texto = (v) => (typeof v === 'string' && v.trim() !== '') || (typeof v === 'number' && Number.isFinite(v));
+const textoOpcional = (v, onde) => {
+  if (v != null && typeof v !== 'string' && !(typeof v === 'number' && Number.isFinite(v))) {
+    faltas.push(`${onde}: precisa ser texto, número ou null`);
+  }
+};
 // `eventos`, `medicamentos` e `periodos` têm de ser lista. Ausente ou null continua
 // valendo como lista vazia; `{}`, texto ou número derrubavam o script com stack trace.
 const tipo = (v) => (typeof v === 'string' ? 'texto' : typeof v === 'number' ? 'número'
@@ -89,22 +94,27 @@ lista(dados.confirmar, '"confirmar"').forEach((item, i) => {
   if (!texto(item)) faltas.push(`confirmar[${i}]: precisa ser texto (ou número) não vazio`);
 });
 lista(dados.eventos, '"eventos"').forEach((ev, i) => {
+  const nome = texto(ev?.nome) ? ev.nome : '?';
   if (!texto(ev?.nome)) faltas.push(`eventos[${i}]: "nome" ausente ou vazio — texto (ou número) obrigatório`);
-  if (!dataReal(ev?.inicio)) faltas.push(`eventos[${i}] ("${ev?.nome ?? '?'}"): "inicio" ausente ou inválido — use AAAA-MM-DD ou AAAA-MM-DDThh:mm (data que exista)`);
+  for (const campo of ['obs', 'cor']) textoOpcional(ev?.[campo], `eventos[${i}].${campo}`);
+  if (!dataReal(ev?.inicio)) faltas.push(`eventos[${i}] ("${nome}"): "inicio" ausente ou inválido — use AAAA-MM-DD ou AAAA-MM-DDThh:mm (data que exista)`);
 });
 lista(dados.medicamentos, '"medicamentos"').forEach((m, i) => {
+  const nome = texto(m?.nome) ? m.nome : '?';
   if (!texto(m?.nome)) faltas.push(`medicamentos[${i}]: "nome" ausente ou vazio — texto (ou número) obrigatório`);
-  lista(m?.periodos, `medicamentos[${i}].periodos ("${m?.nome ?? '?'}")`).forEach((p, j) => {
-    const onde = `medicamentos[${i}].periodos[${j}] ("${m?.nome ?? '?'}")`;
+  textoOpcional(m?.apresentacao, `medicamentos[${i}].apresentacao`);
+  lista(m?.periodos, `medicamentos[${i}].periodos ("${nome}")`).forEach((p, j) => {
+    const onde = `medicamentos[${i}].periodos[${j}] ("${nome}")`;
     // Dose ainda não dita (ver `confirmar` no README) é legítima: período sem `dose`, com
     // null ou "" vira texto vazio — a página mostra vazio em vez de "undefined" e o build
     // continua aceitando o dados.json que já funcionava. Só tipo errado (true, {}, []) é recusado.
     // Período que nem é objeto (true, 3, "x") não aceita `p.dose = ''` (TypeError): recusa antes.
     if (p === null || typeof p !== 'object' || Array.isArray(p)) { faltas.push(`${onde}: precisa ser um objeto { de, ate, dose } (veio ${Array.isArray(p) ? 'lista' : p === null ? 'nulo' : tipo(p)})`); return; }
+    for (const campo of ['nota', 'momento']) textoOpcional(p[campo], `${onde}.${campo}`);
     if (p && (p.dose === undefined || p.dose === null || p.dose === '')) p.dose = '';
     else if (!texto(p?.dose)) faltas.push(`${onde}: "dose" inválida — use texto, número ou deixe vazia ("")`);
     if (!dataReal(p?.de)) faltas.push(`${onde}: "de" ausente ou inválido — use AAAA-MM-DD (data que exista)`);
-    if (p?.ate && !dataReal(p.ate)) faltas.push(`${onde}: "ate" inválido — use AAAA-MM-DD ou null (em aberto)`);
+    if (p.ate != null && p.ate !== '' && !dataReal(p.ate)) faltas.push(`${onde}: "ate" inválido — use AAAA-MM-DD ou null (em aberto)`);
     else if (p?.ate && dataReal(p?.de) && p.ate.slice(0, 10) < p.de.slice(0, 10)) faltas.push(`${onde}: "ate" (${p.ate}) é anterior a "de" (${p.de})`);
   });
 });
