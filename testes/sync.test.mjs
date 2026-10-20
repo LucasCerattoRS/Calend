@@ -38,3 +38,22 @@ test('sincronizar a partir do próprio destino preserva código e dados', {
   assert.equal(fs.readFileSync(entrada, 'utf8'), dados);
   assert.equal(r.status, 0, r.stderr);
 });
+
+test('sincronização inicial sem dados.json termina com sucesso', {
+  skip: process.platform !== 'linux' || !bases.some((base) => fs.existsSync(base)),
+}, (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'calend-sync-vazio-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const destino = path.join(dir, 'disco-sintetico', 'Calendario');
+  fs.mkdirSync(destino, { recursive: true });
+  const usuario = `../..${dir}`;
+  for (const base of bases) {
+    if (fs.existsSync(base)) assert.equal(fs.realpathSync(`${base}/${usuario}`), fs.realpathSync(dir));
+  }
+  const r = spawnSync('bash', [path.join(RAIZ, 'sync-pendrive.sh')], {
+    encoding: 'utf8', env: { ...process.env, USER: usuario },
+  });
+  assert.ok(fs.existsSync(path.join(destino, 'codigo', 'gerar.mjs')));
+  assert.ok(!fs.existsSync(path.join(destino, 'dados.json')));
+  assert.equal(r.status, 0, r.stderr);
+});
