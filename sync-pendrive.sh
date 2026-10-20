@@ -25,12 +25,13 @@ if [[ -z "$DESTINO" ]]; then
   exit 1
 fi
 
-mkdir -p "$DESTINO/codigo"
-rm -rf "$DESTINO/codigo"
-mkdir -p "$DESTINO/codigo"
-for item in gerar.mjs template.html README.md dados.exemplo.json sync-pendrive.sh .gitignore; do
-  [[ -e "$RAIZ/$item" ]] && cp -f "$RAIZ/$item" "$DESTINO/codigo/$item"
-done
+if [[ ! "$RAIZ" -ef "$DESTINO/codigo" ]]; then
+  rm -rf "$DESTINO/codigo"
+  mkdir -p "$DESTINO/codigo"
+  for item in gerar.mjs template.html README.md dados.exemplo.json sync-pendrive.sh .gitignore; do
+    [[ -e "$RAIZ/$item" ]] && cp -f "$RAIZ/$item" "$DESTINO/codigo/$item"
+  done
+fi
 
 cat > "$DESTINO/COMO-USAR.txt" <<'EOF'
 CALENDÁRIO — como usar
