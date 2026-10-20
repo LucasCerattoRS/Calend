@@ -14,10 +14,10 @@ const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const RUNNER = path.join(AQUI, 'pagina-runner.mjs');
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'calend-pg-'));
 
-function pagina(dados, agora, tz = 'America/Sao_Paulo') {
+function pagina(dados, agora, tz = 'America/Sao_Paulo', depois) {
   const f = path.join(TMP, 'd.json');
   fs.writeFileSync(f, JSON.stringify(dados));
-  const r = spawnSync(process.execPath, [RUNNER, f, agora], { encoding: 'utf8', env: { ...process.env, TZ: tz } });
+  const r = spawnSync(process.execPath, [RUNNER, f, agora, ...(depois ? [depois] : [])], { encoding: 'utf8', env: { ...process.env, TZ: tz } });
   assert.equal(r.status, 0, r.stderr);
   return JSON.parse(r.stdout);
 }
@@ -52,6 +52,22 @@ test('contador: 7 dias só no instante exato do início (hora de parede)', () =>
   const ev = { eventos: [{ nome: 'E', inicio: '2026-03-01T08:00' }] };
   assert.match(pagina(ev, '2026-03-08T07:59:00-03:00').contadores, /E 6 dias/);
   assert.match(pagina(ev, '2026-03-08T08:00:00-03:00').contadores, /E 7 dias/);
+});
+
+test('página aberta atualiza dias e marcos ao cruzar a hora de início', () => {
+  const dados = { eventos: [
+    { nome: 'E', inicio: '2026-03-01T08:00' },
+    { nome: 'F', inicio: '2026-03-01T13:00' },
+  ] };
+  const p = pagina(dados, '2026-03-08T07:59:00-03:00', 'America/Sao_Paulo', '2026-03-08T08:00:00-03:00');
+  assert.match(p.contadores, /E 7 dias.*rumo a 14 dias/);
+  assert.match(p.contadores, /F 6 dias.*rumo a 7 dias/);
+});
+
+test('contador se recupera após suspensão e ajuste do relógio no mesmo dia', () => {
+  const dados = { eventos: [{ nome: 'E', inicio: '2026-03-01T08:00' }] };
+  assert.match(pagina(dados, '2026-03-08T07:00:00-03:00', 'America/Sao_Paulo', '2026-03-08T20:00:00-03:00').contadores, /E 7 dias/);
+  assert.match(pagina(dados, '2026-03-08T08:00:00-03:00', 'America/Sao_Paulo', '2026-03-08T07:59:00-03:00').contadores, /E 6 dias/);
 });
 
 // Antes: o contador usava milissegundos; com o início num período de horário de

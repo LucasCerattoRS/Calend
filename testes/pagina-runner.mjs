@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dados = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
-const agora = new Date(process.argv[3]).getTime();
+let agora = new Date(process.argv[3]).getTime();
 
 const template = fs.readFileSync(path.join(RAIZ, 'template.html'), 'utf8');
 const json = JSON.stringify(dados).replace(/<\//g, '<\\/');
@@ -21,15 +21,20 @@ class DataFixa extends Date {
 }
 const els = {};
 const el = (id) => (els[id] ??= { innerHTML: '', textContent: '', querySelectorAll: () => [] });
+const intervalos = [];
 const ctx = {
   Date: DataFixa,
   document: { getElementById: el, querySelectorAll: () => [] },
   location: { reload() {} },
-  setInterval: () => 0,
+  setInterval: (fn) => intervalos.push(fn),
   requestAnimationFrame: () => 0,
 };
 vm.createContext(ctx);
 vm.runInContext(script, ctx);
+if (process.argv[4]) {
+  agora = new Date(process.argv[4]).getTime();
+  intervalos.forEach((fn) => fn());
+}
 const texto = (h) => h.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 const saida = {};
 for (const id of ['hoje', 'contadores', 'hojeMed', 'proximas', 'historico']) {
