@@ -136,11 +136,11 @@ if (!marcador.test(template)) {
   process.exit(1);
 }
 
-// `</script>` dentro do JSON encerraria o bloco cedo demais e quebraria a página.
-const json = JSON.stringify(dados, null, 2).replace(/<\//g, '<\\/');
+// JSON.parse mantém __proto__ como dado; escapar < impede que texto vire marcação HTML.
+const json = JSON.stringify(JSON.stringify(dados)).replace(/</g, '\\u003c');
 // Função (não string) no replace: senão o `$&`, `` $` ``, `$'`, `$$` que por acaso
 // existissem no JSON virariam referências e corromperiam a página em silêncio.
-const html = template.replace(marcador, () => `/*DADOS*/${json}/*FIM*/`);
+const html = template.replace(marcador, () => `/*DADOS*/JSON.parse(${json})/*FIM*/`);
 let geradas = 0;
 for (const saida of saidas) {
   let tmp = null;

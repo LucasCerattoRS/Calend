@@ -7,10 +7,12 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const GERAR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'gerar.mjs');
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'calend-'));
+const dadosDaPagina = (html) => vm.runInNewContext(`(${html.match(/\/\*DADOS\*\/[\s\S]*?\/\*FIM\*\//)[0]})`);
 
 function gerar(dados, prefixo = '') {
   const entrada = path.join(TMP, 'dados.json');
@@ -26,6 +28,27 @@ test('dado válido gera a página', () => {
     medicamentos: [{ nome: 'M', periodos: [{ de: '2000-01-01', ate: null, dose: '1' }] }] });
   assert.equal(r.status, 0, r.stderr);
   assert.ok(r.gerou);
+});
+
+test('chave __proto__ do JSON não introduz eventos herdados na página', () => {
+  const dados = JSON.parse('{"__proto__":{"eventos":[{"nome":"Fantasma","inicio":"2000-01-01"}]}}');
+  const r = gerar(dados);
+  assert.equal(r.status, 0, r.stderr);
+  const html = fs.readFileSync(path.join(TMP, 'saida.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const els = {};
+  const ctx = {
+    document: {
+      getElementById: (id) => els[id] ??= { querySelectorAll: () => [] },
+      querySelectorAll: () => [],
+    },
+    setInterval: () => 0,
+    requestAnimationFrame: () => 0,
+    location: { reload() {} },
+  };
+  vm.runInNewContext(script, ctx);
+  assert.match(els.contadores.innerHTML, /Nenhum evento registrado/);
+  assert.doesNotMatch(els.historico.innerHTML, /Fantasma/);
 });
 
 // Sem o `inicio`, o script da página lança TypeError no 1º evento e TODAS as
@@ -137,7 +160,7 @@ test('período sem dose (ou vazia) continua aceito e não escreve "undefined"', 
     assert.equal(r.status, 0, `${JSON.stringify(dados)}\n${r.stderr}`);
     assert.ok(r.gerou);
     const html = fs.readFileSync(path.join(TMP, 'saida.html'), 'utf8');
-    assert.match(html, /"dose": ""/, 'dose deveria ser gravada como texto vazio');
+    assert.equal(dadosDaPagina(html).medicamentos[0].periodos[0].dose, '', 'dose deveria ser gravada como texto vazio');
   }
 });
 
@@ -267,7 +290,7 @@ test('dois destinos: falha no segundo não estraga o primeiro nem deixa .tmp', (
   const r = spawnSync(process.execPath, [path.join(app, 'gerar.mjs'), entrada], { encoding: 'utf8' });
   assert.equal(r.status, 0, r.stderr);
   const html = fs.readFileSync(path.join(pen, 'Calendario.html'), 'utf8');
-  assert.match(html, /\/\*DADOS\*\/[\s\S]*"E"[\s\S]*\/\*FIM\*\//);
+  assert.equal(dadosDaPagina(html).eventos[0].nome, 'E');
   assert.match(html, /<\/html>\s*$/);
   assert.match(r.stderr, /não deu pra escrever em .*app/);
   assert.ok(fs.statSync(path.join(app, 'Calendario.html')).isDirectory());
