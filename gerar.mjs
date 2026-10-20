@@ -85,6 +85,9 @@ const lista = (v, onde) => {
   faltas.push(`${onde}: precisa ser uma lista [ … ] (veio ${tipo(v)}) — use [] se não houver nenhum`);
   return [];
 };
+lista(dados.confirmar, '"confirmar"').forEach((item, i) => {
+  if (!texto(item)) faltas.push(`confirmar[${i}]: precisa ser texto (ou número) não vazio`);
+});
 lista(dados.eventos, '"eventos"').forEach((ev, i) => {
   if (!texto(ev?.nome)) faltas.push(`eventos[${i}]: "nome" ausente ou vazio — texto (ou número) obrigatório`);
   if (!dataReal(ev?.inicio)) faltas.push(`eventos[${i}] ("${ev?.nome ?? '?'}"): "inicio" ausente ou inválido — use AAAA-MM-DD ou AAAA-MM-DDThh:mm (data que exista)`);

@@ -166,6 +166,19 @@ test('eventos/medicamentos/periodos que não são lista são recusados com mensa
   }
 });
 
+test('pendências fora do formato são recusadas antes de gerar uma página quebrada', () => {
+  for (const confirmar of ['conferir item', {}, 1, true, [{ toString: null }]]) {
+    const r = gerar({ confirmar });
+    assert.equal(r.status, 1, JSON.stringify(confirmar));
+    assert.match(r.stderr, /confirmar/);
+    assert.doesNotMatch(r.stderr, /TypeError|\n\s+at /);
+    assert.ok(!r.gerou);
+  }
+  for (const confirmar of [undefined, null, [], ['Conferir item'], [2]]) {
+    assert.equal(gerar({ confirmar }).status, 0);
+  }
+});
+
 const VALIDO = { eventos: [{ nome: 'E', inicio: '2000-01-01' }] };
 const sobras = (dir) => fs.readdirSync(dir).filter((n) => n.endsWith('.tmp'));
 
