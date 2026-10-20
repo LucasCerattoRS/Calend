@@ -23,11 +23,11 @@ const cru = process.argv.includes('--html');
 const entrada = args[0] || path.join(PROJETO, 'dados.exemplo.json');
 const dados = JSON.parse(fs.readFileSync(entrada, 'utf8'));
 
-// Mesmo transporte do gerar.mjs: injeta o JSON no marcador (escapando </).
+// Mesmo transporte do gerar.mjs: lê o JSON como dado e escapa < no marcador.
 const template = fs.readFileSync(path.join(PROJETO, 'template.html'), 'utf8');
-const json = JSON.stringify(dados).replace(/<\//g, '<\\/');
+const json = JSON.stringify(JSON.stringify(dados)).replace(/</g, '\\u003c');
 const script = template.match(/<script>([\s\S]*)<\/script>/)[1]
-  .replace(/\/\*DADOS\*\/[\s\S]*?\/\*FIM\*\//, () => `/*DADOS*/${json}/*FIM*/`);
+  .replace(/\/\*DADOS\*\/[\s\S]*?\/\*FIM\*\//, () => `/*DADOS*/JSON.parse(${json})/*FIM*/`);
 
 // DOM de mentira: só o que o script usa. Cada getElementById devolve um objeto
 // que "aceita" innerHTML/textContent — e a gente lê depois o que ficou lá.

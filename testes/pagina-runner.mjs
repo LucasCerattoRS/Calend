@@ -11,9 +11,9 @@ const dados = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
 let agora = new Date(process.argv[3]).getTime();
 
 const template = fs.readFileSync(path.join(RAIZ, 'template.html'), 'utf8');
-const json = JSON.stringify(dados).replace(/<\//g, '<\\/');
+const json = JSON.stringify(JSON.stringify(dados)).replace(/</g, '\\u003c');
 const script = template.match(/<script>([\s\S]*)<\/script>/)[1]
-  .replace(/\/\*DADOS\*\/[\s\S]*?\/\*FIM\*\//, () => `/*DADOS*/${json}/*FIM*/`);
+  .replace(/\/\*DADOS\*\/[\s\S]*?\/\*FIM\*\//, () => `/*DADOS*/JSON.parse(${json})/*FIM*/`);
 
 class DataFixa extends Date {
   constructor(...a) { a.length ? super(...a) : super(agora); }
