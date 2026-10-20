@@ -169,6 +169,20 @@ test('eventos/medicamentos/periodos que não são lista são recusados com mensa
 const VALIDO = { eventos: [{ nome: 'E', inicio: '2000-01-01' }] };
 const sobras = (dir) => fs.readdirSync(dir).filter((n) => n.endsWith('.tmp'));
 
+test('falha em todos os destinos retorna erro sem anunciar página disponível', () => {
+  const dir = fs.mkdtempSync(path.join(TMP, 'sem-saida-'));
+  const entrada = path.join(dir, 'dados.json');
+  const saida = path.join(dir, 'ocupado');
+  fs.writeFileSync(entrada, JSON.stringify(VALIDO));
+  fs.mkdirSync(saida);
+  const r = spawnSync(process.execPath, [GERAR, entrada, saida], { encoding: 'utf8' });
+  assert.equal(r.status, 1, r.stderr);
+  assert.match(r.stderr, /não deu pra escrever/);
+  assert.doesNotMatch(r.stdout, /gerado:|Abra com 2 cliques/);
+  assert.ok(fs.statSync(saida).isDirectory());
+  assert.deepEqual(sobras(dir), []);
+});
+
 // Escrita não atômica: o writeFileSync trunca o arquivo antes de gravar, então uma falha no
 // meio (disco cheio, pendrive arrancado) deixava a página pela metade. Simulado com limite de
 // tamanho de arquivo (ulimit -f): no código antigo o Calendario.html ficava com 2048 bytes.

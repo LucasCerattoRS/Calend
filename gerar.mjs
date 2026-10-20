@@ -138,6 +138,7 @@ const json = JSON.stringify(dados, null, 2).replace(/<\//g, '<\\/');
 // Função (não string) no replace: senão o `$&`, `` $` ``, `$'`, `$$` que por acaso
 // existissem no JSON virariam referências e corromperiam a página em silêncio.
 const html = template.replace(marcador, () => `/*DADOS*/${json}/*FIM*/`);
+let geradas = 0;
 for (const saida of saidas) {
   let tmp = null;
   try {
@@ -154,6 +155,7 @@ for (const saida of saidas) {
     if (modo !== undefined) fs.chmodSync(tmp, modo); // a umask pode ter tirado bits de `mode`
     fs.renameSync(tmp, saida);
     tmp = null;
+    geradas++;
     console.log(`Calendario.html gerado: ${saida}`);
   } catch (e) {
     if (tmp) try { fs.rmSync(tmp, { force: true }); } catch { /* sem o que fazer */ }
@@ -161,6 +163,8 @@ for (const saida of saidas) {
     console.warn(`  (não deu pra escrever em ${saida}: ${e.message} — a versão anterior, se havia, ficou intacta)`);
   }
 }
+
+if (!geradas) process.exit(1);
 
 const nMed = (dados.medicamentos || []).length;
 const nEv = (dados.eventos || []).length;
