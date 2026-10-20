@@ -90,6 +90,15 @@ test('"ate" fora do formato ou antes do "de" é recusado; null fica em aberto', 
   assert.equal(com('2026-03-01').status, 0);
 });
 
+test('fim zero ou falso não transforma período inválido em tratamento sem término', () => {
+  for (const ate of [0, false]) {
+    const r = gerar({ medicamentos: [{ nome: 'M', periodos: [{ de: '2000-01-01', ate }] }] });
+    assert.equal(r.status, 1, JSON.stringify(ate));
+    assert.match(r.stderr, /"ate" inválido/);
+    assert.ok(!r.gerou);
+  }
+});
+
 // Hora/minuto/segundo fora da faixa: "2026-03-01T99:99" passava no formato, o contador
 // normalizava para 05/03 04:39 e a linha do tempo mostrava 01/03.
 test('hora fora de 00–23 e minuto/segundo fora de 00–59 são recusados, com e sem hora', () => {
@@ -133,6 +142,27 @@ test('evento/remédio sem nome e dose de tipo errado são recusados', () => {
     assert.equal(r.status, 1, JSON.stringify(dados));
     assert.match(r.stderr, esperado);
     assert.ok(!r.gerou);
+  }
+});
+
+test('objetos em campos de texto são recusados sem quebrar a própria validação', async (t) => {
+  const ruim = { toString: null };
+  for (const dados of [
+    { eventos: [{ nome: ruim }] },
+    { medicamentos: [{ nome: ruim }] },
+    { eventos: [{ nome: 'E', inicio: '2000-01-01', obs: ruim }] },
+    { eventos: [{ nome: 'E', inicio: '2000-01-01', cor: ruim }] },
+    { medicamentos: [{ nome: 'M', apresentacao: ruim }] },
+    { medicamentos: [{ nome: 'M', periodos: [{ de: '2000-01-01', nota: ruim }] }] },
+    { medicamentos: [{ nome: 'M', periodos: [{ de: '2000-01-01', momento: ruim }] }] },
+  ]) {
+    await t.test(JSON.stringify(dados), () => {
+      const r = gerar(dados);
+      assert.equal(r.status, 1, JSON.stringify(dados));
+      assert.doesNotMatch(r.stderr, /TypeError|\n\s+at /);
+      assert.match(r.stderr, /Nada foi gerado/);
+      assert.ok(!r.gerou);
+    });
   }
 });
 
