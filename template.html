@@ -203,6 +203,11 @@
     <div class="card" id="calendario"></div>
   </section>
 
+  <section id="secEstoque" hidden>
+    <h2>Estoque de remédios</h2>
+    <div class="card" id="estoque"></div>
+  </section>
+
   <div class="duplo">
     <section class="s-hoje">
       <h2>Hoje</h2>
@@ -374,6 +379,49 @@ function pintarHoje() {
     </div>`).join('');
 }
 
+// ---- estoque: retiradas (farmácia) menos o consumo estimado pelos períodos (`por_dia`) ----
+// Estimativa: conta a dose do dia de hoje como já tomada. Só calcula se toda retirada
+// tiver `quantidade`; sem isso mostra apenas as datas.
+function estoqueDe(m, iso) {
+  const r = (m.retiradas || []).filter((x) => dia(x.data) <= iso);
+  if (!r.length || r.some((x) => !(x.quantidade > 0))) return null;
+  let usado = 0, porDia = 0;
+  for (const p of m.periodos || []) {
+    if (!(p.por_dia > 0) || dia(p.de) > iso) continue;
+    const fim = p.ate && dia(p.ate) < iso ? dia(p.ate) : iso;
+    usado += p.por_dia * (diasEntre(dia(p.de), fim) + 1);
+    if (ativoEm(p, iso)) porDia += p.por_dia;
+  }
+  const total = r.reduce((s, x) => s + x.quantidade, 0);
+  return { total, usado, sobra: total - usado, porDia };
+}
+const num = (n) => String(Math.round(n * 10) / 10).replace('.', ',');
+
+function pintarEstoque() {
+  const meds = (DADOS.medicamentos || []).filter((m) => (m.retiradas || []).length);
+  if (!meds.length) return;
+  document.getElementById('secEstoque').hidden = false;
+  document.getElementById('estoque').innerHTML = meds.map((m) => {
+    const rs = [...m.retiradas].sort((a, b) => dia(a.data).localeCompare(dia(b.data)));
+    const e = estoqueDe(m, hojeISO);
+    let linha = '<span class="muted">sem quantidade em todas as retiradas — estoque não calculado</span>';
+    if (e) {
+      linha = `retirado ${num(e.total)} · usado ~${num(e.usado)} · <b>sobra ~${num(Math.max(0, e.sobra))}</b>`;
+      if (e.sobra <= 0) linha += ' — <span class="chip aviso"><i></i>acabou, repor</span>';
+      else if (e.porDia > 0) {
+        const d = Math.floor(e.sobra / e.porDia);
+        linha += ` — dura até ~${fmtData(somaDias(hojeISO, d))} (${plural(d, 'dia', 'dias')})`;
+      }
+    }
+    // Retirada que chega com o estoque já negativo: provável retirada não registrada.
+    const furos = rs.filter((r) => { const x = estoqueDe(m, somaDias(dia(r.data), -1)); return x && x.sobra < 0; })
+      .map((r) => `<div class="nota">Faltou remédio antes da retirada de ${fmtData(dia(r.data))} — falta registrar alguma retirada?</div>`).join('');
+    return `<div class="momento"><div class="m-rotulo"><span>${esc(nomeCompleto(m))}</span></div>
+      <div class="linha"><span>${linha}</span></div>${furos}
+      <div class="nota">Retiradas: ${rs.map((r) => `${fmtData(dia(r.data))}${r.quantidade ? ` (${num(r.quantidade)})` : ''}`).join(' · ')}</div></div>`;
+  }).join('');
+}
+
 // ---- mudanças: começo e fim de cada período viram eventos na linha do tempo ----
 const PESO = { marco: 0, fim: 1, inicio: 2 };
 function mudancas() {
@@ -512,6 +560,9 @@ function marcas(a0, a1, saude = true) {
     out.push({ data: dia(p.de), nome: `começa ${nomeCompleto(m)}`, tipo: 'remedio' });
     if (p.ate) out.push({ data: dia(p.ate), nome: `último dia de ${nomeCompleto(m)}`, tipo: 'remedio' });
   }
+  if (saude) for (const m of DADOS.medicamentos || []) for (const r of m.retiradas || []) {
+    out.push({ data: dia(r.data), nome: `retirada de ${nomeCompleto(m)}`, tipo: 'remedio' });
+  }
   return out.filter((x) => Number(x.data.slice(0, 4)) >= a0 && Number(x.data.slice(0, 4)) <= a1)
     .sort((x, y) => x.data.localeCompare(y.data));
 }
@@ -577,6 +628,7 @@ pintarContadores();
 tique();
 setInterval(tique, 1000);
 pintarHoje();
+pintarEstoque();
 pintarProximas();
 pintarHistorico();
 pintarPendencias();

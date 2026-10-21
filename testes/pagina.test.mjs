@@ -143,3 +143,23 @@ test('.ics tem feriados, eventos e datas, e NÃO tem remédio (dado de saúde)',
   assert.match(ics, /DTSTART;VALUE=DATE:20230301/);
   assert.doesNotMatch(ics, /RemSecreto/);
 });
+
+const comEstoque = (retiradas) => ({ medicamentos: [{ nome: 'Rem', periodos: [{ de: '2026-07-01', ate: null, dose: '2 cp', momento: 'noite', por_dia: 2 }], retiradas }] });
+
+test('estoque: retirada menos consumo estimado e quando acaba', () => {
+  // 01/07 a 10/07 = 10 dias x 2 = 20 usados; 120 - 20 = 100 sobra; 100/2 = 50 dias -> 29/08
+  const p = pagina(comEstoque([{ data: '2026-07-01', quantidade: 120 }]), '2026-07-10T12:00:00-03:00');
+  assert.match(p.estoque, /retirado 120 · usado ~20 · sobra ~100/);
+  assert.match(p.estoque, /dura até ~29\/08\/2026 \(50 dias\)/);
+});
+
+test('estoque: aponta retirada faltando quando o remédio acabaria antes da próxima', () => {
+  const p = pagina(comEstoque([{ data: '2026-07-01', quantidade: 10 }, { data: '2026-08-01', quantidade: 100 }]), '2026-08-02T12:00:00-03:00');
+  assert.match(p.estoque, /Faltou remédio antes da retirada de 01\/08\/2026/);
+});
+
+test('estoque: retirada sem quantidade só lista as datas', () => {
+  const p = pagina(comEstoque([{ data: '2026-07-01' }]), '2026-07-10T12:00:00-03:00');
+  assert.match(p.estoque, /estoque não calculado/);
+  assert.match(p.estoque, /01\/07\/2026/);
+});

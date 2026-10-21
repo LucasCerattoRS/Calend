@@ -148,6 +148,11 @@ Além do app, o repositório carrega em [`docs/estudo/`](docs/estudo/) uma **doc
 didática completa do código-fonte**, escrita para quem está aprendendo programação e quer
 entender cada linha — não só usar.
 
+### Estoque e retiradas (opcional)
+
+Cada medicamento aceita `retiradas: [{ "data": "2026-07-01", "quantidade": 120 }]` (o que foi pego na farmácia) e cada período aceita `por_dia` (unidades por dia). A página mostra "Estoque de remédios": retirado, usado (estimado), sobra e até quando dura; e avisa quando o remédio teria acabado antes de uma retirada (retirada possivelmente não registrada). Sem `quantidade` em todas as retiradas, só lista as datas. Retiradas não vão para o `.ics`.
+
+
 ### Como o material é organizado
 
 Cada arquivo de código tem **dois espelhos**, para dois momentos de estudo:

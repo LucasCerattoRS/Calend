@@ -123,8 +123,15 @@ lista(dados.medicamentos, '"medicamentos"').forEach((m, i) => {
     if (p && (p.dose === undefined || p.dose === null || p.dose === '')) p.dose = '';
     else if (!texto(p?.dose)) faltas.push(`${onde}: "dose" inválida — use texto, número ou deixe vazia ("")`);
     if (!dataReal(p?.de)) faltas.push(`${onde}: "de" ausente ou inválido — use AAAA-MM-DD (data que exista)`);
+    if (p.por_dia != null && !(typeof p.por_dia === 'number' && p.por_dia > 0)) faltas.push(`${onde}: "por_dia" precisa ser um número maior que zero (unidades por dia) ou ausente`);
     if (p.ate != null && p.ate !== '' && !dataReal(p.ate)) faltas.push(`${onde}: "ate" inválido — use AAAA-MM-DD ou null (em aberto)`);
     else if (p?.ate && dataReal(p?.de) && p.ate.slice(0, 10) < p.de.slice(0, 10)) faltas.push(`${onde}: "ate" (${p.ate}) é anterior a "de" (${p.de})`);
+  });
+  // `retiradas`: [{ data, quantidade }] — o que foi pego na farmácia; alimenta o estoque estimado.
+  lista(m?.retiradas, `medicamentos[${i}].retiradas ("${nome}")`).forEach((r, j) => {
+    const onde = `medicamentos[${i}].retiradas[${j}] ("${nome}")`;
+    if (!dataReal(r?.data)) faltas.push(`${onde}: "data" ausente ou inválida — use AAAA-MM-DD (data que exista)`);
+    if (r?.quantidade != null && !(typeof r.quantidade === 'number' && r.quantidade > 0)) faltas.push(`${onde}: "quantidade" precisa ser um número maior que zero ou ausente`);
   });
 });
 if (faltas.length) {

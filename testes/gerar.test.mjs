@@ -357,3 +357,11 @@ test('datas: recusa data inexistente, nome vazio e repete inválido', () => {
   assert.match(r.stderr, /datas\[0\].*"data" ausente ou inválida/);
   assert.match(r.stderr, /datas\[1\].*"repete"/);
 });
+
+test('retirada sem data ou com quantidade inválida e por_dia inválido são recusados', () => {
+  const base = (extra, per = {}) => ({ medicamentos: [{ nome: 'M', periodos: [{ de: '2026-01-01', dose: '1', ...per }], ...extra }] });
+  assert.equal(gerar(base({ retiradas: [{ quantidade: 5 }] })).status, 1);
+  assert.equal(gerar(base({ retiradas: [{ data: '2026-01-01', quantidade: -1 }] })).status, 1);
+  assert.equal(gerar(base({}, { por_dia: 0 })).status, 1);
+  assert.equal(gerar(base({ retiradas: [{ data: '2026-01-01', quantidade: 30 }, { data: '2026-02-01' }] }, { por_dia: 1 })).status, 0);
+});

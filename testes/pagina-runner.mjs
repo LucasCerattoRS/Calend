@@ -37,7 +37,7 @@ if (process.argv[4]) {
 }
 const texto = (h) => h.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 const saida = {};
-for (const id of ['hoje', 'contadores', 'hojeMed', 'proximas', 'historico', 'calendario']) {
+for (const id of ['hoje', 'contadores', 'hojeMed', 'estoque', 'proximas', 'historico', 'calendario']) {
   saida[id] = texto((els[id]?.innerHTML) || els[id]?.textContent || '');
 }
 if (process.env.ICS) saida.ics = ctx.gerarICS();
