@@ -163,3 +163,10 @@ test('estoque: retirada sem quantidade só lista as datas', () => {
   assert.match(p.estoque, /estoque não calculado/);
   assert.match(p.estoque, /01\/07\/2026/);
 });
+
+test('cor e momento com nome herdado do Object (constructor, __proto__) não quebram a página', () => {
+  const dados = { eventos: [{ nome: 'E', inicio: '2020-01-01', cor: 'constructor' }], medicamentos: [{ nome: 'M', periodos: [{ de: '2020-01-01', ate: null, dose: '1', momento: 'constructor' }] }] };
+  const p = pagina(dados, '2026-03-10T12:00:00-03:00');
+  assert.match(p.hojeMed, /M/);
+  assert.doesNotMatch(p.hojeMed, /function|undefined/);
+});
