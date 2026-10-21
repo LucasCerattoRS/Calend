@@ -159,6 +159,9 @@ dado: "sem pendências" e "esqueci de listar" são **indistinguíveis** na tela.
 **silencioso**: se dois eventos tiverem cores fora do mapa, ambos ficam ciano e a
 identidade visual se perde sem erro nenhum.
 
+Os mapas `CORES` e `ICO` não têm protótipo: nomes como `constructor`, `toString`
+e `__proto__` também caem no fallback, sem renderizar funções internas do JavaScript.
+
 ### R7. Momento desconhecido (`"madrugada"`)
 
 ```json

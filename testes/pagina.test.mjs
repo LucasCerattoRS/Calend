@@ -93,3 +93,17 @@ test('início na meia-noite suprimida pelo horário de verão preserva a hora de
   assert.match(pagina(ev, '2018-11-05T00:00:00-02:00').contadores, /E 1 dia/);
   assert.match(pagina(ev, '2018-11-05T00:30:00-02:00').contadores, /E 1 dia/);
 });
+
+test('nomes herdados de Object usam cor e ícone genéricos, preservando o texto', () => {
+  for (const chave of ['constructor', '__proto__', 'toString', 'hasOwnProperty', 'desconhecido']) {
+    const p = pagina({
+      eventos: [{ nome: 'Evento', inicio: '2026-03-01', cor: chave }],
+      medicamentos: [{ nome: 'Rem', periodos: [{ de: '2026-03-01', dose: '1', momento: chave }] }],
+    }, '2026-03-08T12:00:00-03:00');
+    assert.match(p.html.contadores, /style="--cor:var\(--ev-ciano\)"/, chave);
+    assert.match(p.html.historico, /style="--cor:var\(--ev-ciano\)"/, chave);
+    assert.match(p.html.hojeMed, /<circle cx="12" cy="12" r="9"\/>/, chave);
+    assert.ok(p.hojeMed.includes(chave), chave);
+    assert.doesNotMatch(p.hojeMed, /native code|\[object Object\]/, chave);
+  }
+});

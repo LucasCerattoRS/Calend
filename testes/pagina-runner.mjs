@@ -36,8 +36,9 @@ if (process.argv[4]) {
   intervalos.forEach((fn) => fn());
 }
 const texto = (h) => h.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
-const saida = {};
-for (const id of ['hoje', 'contadores', 'hojeMed', 'proximas', 'historico']) {
+const saida = { html: {} };
+for (const id of ['hoje', 'pendencias', 'contadores', 'hojeMed', 'proximas', 'historico']) {
+  saida.html[id] = els[id]?.innerHTML || '';
   saida[id] = texto((els[id]?.innerHTML) || els[id]?.textContent || '');
 }
 console.log(JSON.stringify(saida));
