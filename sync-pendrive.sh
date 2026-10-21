@@ -26,10 +26,14 @@ if [[ -z "$DESTINO" ]]; then
 fi
 
 if [[ ! "$RAIZ" -ef "$DESTINO/codigo" ]]; then
-  rm -rf "$DESTINO/codigo"
+  if [[ -L "$DESTINO/codigo" ]]; then
+    echo 'A pasta codigo é um link simbólico; confira o destino antes de sincronizar.' >&2
+    exit 1
+  fi
   mkdir -p "$DESTINO/codigo"
+  # Só atualiza o código conhecido; arquivos extras podem ser a única cópia de um dado.
   for item in gerar.mjs template.html README.md dados.exemplo.json sync-pendrive.sh .gitignore; do
-    [[ -e "$RAIZ/$item" ]] && cp -f "$RAIZ/$item" "$DESTINO/codigo/$item"
+    [[ -e "$RAIZ/$item" ]] && cp -T --remove-destination "$RAIZ/$item" "$DESTINO/codigo/$item"
   done
 fi
 

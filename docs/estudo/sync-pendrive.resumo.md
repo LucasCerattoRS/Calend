@@ -10,8 +10,8 @@ no `dados.json`.
 1. `set -euo pipefail` — modo estrito.
 2. `RAIZ` = pasta do script.
 3. **Procura** `Calendario` em `/run/media/$USER` e `/media/$USER`; nada → erro + `exit 1`.
-4. **Recomeço limpo** de `codigo/` (`mkdir -p` → `rm -rf` → `mkdir -p`).
-5. Copia uma **allowlist** de arquivos (sem `dados.json`).
+4. Se já está no próprio destino, pula a cópia; se `codigo/` é link para outro local, recusa.
+5. Cria `codigo/` se necessário e atualiza uma **allowlist** (sem `dados.json`), preservando extras.
 6. Escreve `COMO-USAR.txt` (heredoc).
 7. **Relatório** + aviso "dados.json preservado".
 
@@ -31,6 +31,7 @@ no `dados.json`.
 **Gotchas.**
 - Só **Linux** (macOS monta em `/Volumes`, fora da lista); no **Windows** usa-se a
   cópia local do código.
-- `rm -rf "$DESTINO/codigo"` é seguro porque `DESTINO` é validado (não-vazio) e específico.
-- O **recomeço limpo** garante que arquivos removidos do projeto sumam do pendrive.
+- Não apaga a pasta: arquivos extras e subpastas permanecem preservados.
+- GNU `cp --remove-destination` substitui arquivos sem escrever através de links.
+- Uma falha pode deixar o código parcialmente atualizado; não há transação da pasta inteira.
 - `dados.json` fora da allowlist **de propósito** = a única cópia do dado fica intocada.

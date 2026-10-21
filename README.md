@@ -100,6 +100,11 @@ repositório** (ex.: `<pendrive>/Calendario/dados.json`), preencha com seus fato
 `node gerar.mjs`. O `./sync-pendrive.sh` (Linux) leva o código junto pro pendrive, pra
 regenerar em qualquer máquina.
 
+A sincronização atualiza apenas os arquivos de código conhecidos e preserva arquivos
+extras em `codigo/`; não faz limpeza automática. Ela usa GNU `cp` (padrão nas distribuições
+Linux mais comuns) para substituir os arquivos sem seguir links para outros dados.
+Uma pasta `codigo/` que seja link simbólico para outro local é recusada.
+
 ---
 
 ## 📋 O formato do dado

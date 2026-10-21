@@ -48,8 +48,8 @@ até o fim.
 24. No CSS, por que `.prox-corpo` tem `min-width: 0`?
 25. Por que o medidor só anima quando a largura é setada dentro de
     `requestAnimationFrame`?
-26. O `sync-pendrive.sh` faz `mkdir -p` → `rm -rf` → `mkdir -p`. Por que essa sequência, e
-    não só copiar por cima?
+26. Por que o `sync-pendrive.sh` atualiza apenas os arquivos conhecidos em vez de
+    apagar toda a pasta `codigo/`? Para que serve `cp --remove-destination`?
 
 ## Desafios (aplicar)
 
@@ -176,8 +176,9 @@ anteriores: aqui você **prevê por escrito**, depois **roda** e confere.
     registraria o `width: 0` inicial — nada a animar. O `requestAnimationFrame` adia a
     troca (o callback roda **antes do próximo paint**, mas já noutro momento do ciclo);
     o idioma 100% garantido seria `rAF` duplo ou forçar reflow. (template-js/css)
-26. Pra um **recomeço limpo**: garante a pasta, apaga tudo, recria vazia — assim arquivos
-    **removidos** do projeto também somem do pendrive. Copiar por cima deixaria lixo. (sync)
+26. Para preservar arquivos extras que podem ser a única cópia de dados. O GNU
+    `cp --remove-destination` substitui cada destino sem escrever através de links
+    simbólicos ou hard links para outros arquivos. Não limpa arquivos antigos. (sync)
 27. No **`dados.json`** (o real, no pendrive), acrescente um objeto em `eventos` com
     `nome`, `inicio` (com `T00:00`), `cor: "verde"`; depois rode `node gerar.mjs`. (dados/gerar)
 28. Feche o período atual pondo `ate` = hoje e adicione um **novo período** com `de` =

@@ -95,32 +95,39 @@ pasta do usuário, ex.: `C:\Users\voce\Calendario`).
 
 ---
 
-## Bloco 4 — Copiar o código com "recomeço limpo" (linhas 28–33)
+## Bloco 4 — Atualizar só o código conhecido
 
 ```bash
-mkdir -p "$DESTINO/codigo"
-rm -rf "$DESTINO/codigo"
-mkdir -p "$DESTINO/codigo"
-for item in gerar.mjs template.html README.md dados.exemplo.json sync-pendrive.sh .gitignore; do
-  [[ -e "$RAIZ/$item" ]] && cp -f "$RAIZ/$item" "$DESTINO/codigo/$item"
-done
+if [[ ! "$RAIZ" -ef "$DESTINO/codigo" ]]; then
+  if [[ -L "$DESTINO/codigo" ]]; then
+    echo 'A pasta codigo é um link simbólico; confira o destino antes de sincronizar.' >&2
+    exit 1
+  fi
+  mkdir -p "$DESTINO/codigo"
+  for item in gerar.mjs template.html README.md dados.exemplo.json sync-pendrive.sh .gitignore; do
+    [[ -e "$RAIZ/$item" ]] && cp -T --remove-destination "$RAIZ/$item" "$DESTINO/codigo/$item"
+  done
+fi
 ```
 
-📌 **O quê.** Zera a pasta `codigo/` e copia **só** os arquivos de código listados.
+📌 **O quê.** Atualiza os seis arquivos de código, preservando os demais arquivos e
+subpastas. Se o script já está rodando do próprio destino, não copia sobre si mesmo.
 
-🧠 **Conceito 1 — _clean slate_ (recomeço limpo).** A sequência `mkdir -p` → `rm -rf` →
-`mkdir -p` garante uma pasta **vazia**: assim, se um arquivo foi **removido** do projeto,
-ele também some do pendrive (uma cópia "por cima" deixaria lixo pra trás). O primeiro
-`mkdir -p` evita erro caso a pasta ainda não exista.
+🧠 **Conceito — lista de permissão (allowlist).** Só os itens da lista são substituídos.
+`dados.json` não está nela. Não se apaga `codigo/`: um arquivo extra pode ser uma
+anotação importante ou a única cópia de um dado, mesmo guardado no lugar errado.
+Arquivos removidos do projeto deixam de ser copiados, mas não são apagados do pendrive.
 
-🧠 **Conceito 2 — lista de permissão (allowlist).** Copia **exatamente** os itens da lista.
-Repare que **`dados.json` NÃO está nela** — é assim que o script honra "nunca tocar no
-dado". `[[ -e "$RAIZ/$item" ]] && cp …` só copia se o arquivo existir.
+🔤 **Sintaxe.** `-ef` compara a identidade dos diretórios; `-L` identifica links
+simbólicos. O GNU `cp --remove-destination` remove o arquivo de destino antes de
+copiar, evitando escrever através de um link simbólico ou hard link que aponte
+para outro dado. `-T` exige que o destino seja um arquivo, recusando uma pasta
+no lugar dele. A pasta `codigo/` como link para outro local é recusada.
 
-⚠️ **Armadilha — `rm -rf` em variável.** `rm -rf "$DESTINO/codigo"` é seguro porque
-`DESTINO` foi validado (não é vazio) e o alvo é específico (`/codigo`). `rm -rf` em uma
-variável mal formada é uma das formas clássicas de acidente em shell — o modo estrito
-(`-u`) e a checagem de `-z` ajudam a evitar isso.
+⚠️ **Limite.** A atualização não é uma transação da pasta inteira: se uma cópia
+falhar, arquivos anteriores já podem ter sido atualizados. O modo estrito aborta,
+e os dados fora da lista permanecem preservados. Não há garantia contra remoção
+física do pendrive ou alteração concorrente dos caminhos.
 
 ---
 
