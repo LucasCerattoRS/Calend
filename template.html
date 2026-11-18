@@ -534,7 +534,9 @@ function feriados(a) {
     [somaDias(p, -2), 'Sexta-feira Santa'], [p, 'Páscoa'], [mkISO(a, 4, 21), 'Tiradentes'],
     [mkISO(a, 5, 1), 'Dia do Trabalho'], [somaDias(p, 60), 'Corpus Christi'], [mkISO(a, 9, 7), 'Independência'],
     [mkISO(a, 9, 20), 'Dia do Gaúcho (RS)'], [mkISO(a, 10, 12), 'Nossa Senhora Aparecida'], [mkISO(a, 11, 2), 'Finados'],
-    [mkISO(a, 11, 15), 'Proclamação da República'], [mkISO(a, 11, 20), 'Consciência Negra'], [mkISO(a, 12, 25), 'Natal'],
+    [mkISO(a, 11, 15), 'Proclamação da República'], [mkISO(a, 12, 25), 'Natal'],
+    // Consciência Negra só é feriado nacional a partir de 2024 (Lei 14.759/2023).
+    ...(a >= 2024 ? [[mkISO(a, 11, 20), 'Consciência Negra']] : []),
   ].map(([data, nome]) => ({ data, nome, tipo: 'feriado' }));
 }
 const aniversario = (iso, a) => { // 29/02 cai em 28/02 nos anos sem dia 29
@@ -601,7 +603,20 @@ function pintarCalendario() {
 
 // .ics com feriados, eventos e datas (3 anos pra trás, 5 pra frente). Remédio fica de fora:
 // é dado de saúde e o arquivo vai parar em agenda de nuvem.
-const icsTxt = (s) => String(s).replace(/\\/g, '\\\\').replace(/;/g, '\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+// RFC 5545 §3.3.11: em TEXT, barra invertida, ";" e "," levam barra antes (o antigo '\;' era só ";" em JS).
+const icsTxt = (s) => String(s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r\n|\r|\n/g, '\\n');
+// Dobra em no máximo 75 OCTETOS por linha (RFC 5545 §3.1), contando UTF-8 e sem partir um
+// caractere: "ã" ocupa 2 octetos e um emoji 4, então 60 caracteres podiam passar de 75.
+const octetos = (c) => { const n = c.codePointAt(0); return n < 0x80 ? 1 : n < 0x800 ? 2 : n < 0x10000 ? 3 : 4; };
+function dobrar(l) {
+  const partes = []; let atual = '', tam = 0;
+  for (const c of l) {
+    const o = octetos(c);
+    if (tam + o > 75) { partes.push(atual); atual = ' '; tam = 1; }
+    atual += c; tam += o;
+  }
+  return [...partes, atual].join('\r\n');
+}
 function gerarICS() {
   const y = hoje.getFullYear(), carimbo = isoDe(hoje).replace(/-/g, '') + 'T000000Z';
   const linhas = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Calendario//PT-BR//', 'CALSCALE:GREGORIAN'];
@@ -612,11 +627,7 @@ function gerarICS() {
       `SUMMARY:${icsTxt(x.nome)}`, 'END:VEVENT');
   });
   linhas.push('END:VCALENDAR');
-  return linhas.map((l) => { // dobra linhas longas (RFC 5545: 75 octetos)
-    const partes = []; let r = l;
-    while (r.length > 60) { partes.push(r.slice(0, 60)); r = ' ' + r.slice(60); }
-    return [...partes, r].join('\r\n');
-  }).join('\r\n') + '\r\n';
+  return linhas.map(dobrar).join('\r\n') + '\r\n';
 }
 function baixarICS() {
   const url = URL.createObjectURL(new Blob([gerarICS()], { type: 'text/calendar;charset=utf-8' }));

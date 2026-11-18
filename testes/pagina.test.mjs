@@ -144,6 +144,35 @@ test('.ics tem feriados, eventos e datas, e NÃO tem remédio (dado de saúde)',
   assert.doesNotMatch(ics, /RemSecreto/);
 });
 
+const icsDe = (dados, agora) => {
+  const f = path.join(TMP, 'ics2.json');
+  fs.writeFileSync(f, JSON.stringify(dados));
+  const r = spawnSync(process.execPath, [RUNNER, f, agora], { encoding: 'utf8', env: { ...process.env, TZ: 'America/Sao_Paulo', ICS: '1' } });
+  assert.equal(r.status, 0, r.stderr);
+  return JSON.parse(r.stdout).ics;
+};
+
+test('.ics escapa ";" "," e barra no SUMMARY (RFC 5545 §3.3.11)', () => {
+  const ics = icsDe({ datas: [{ nome: 'Prova; parte 1, sala A\\B\rC\nD', data: '2026-05-10' }] }, '2026-03-15T12:00:00-03:00')
+    .replace(/\r\n /g, '');
+  assert.match(ics, /SUMMARY:Prova\\; parte 1\\, sala A\\\\B\\nC\\nD\r\n/);
+});
+
+test('.ics dobra linhas em até 75 octetos UTF-8 sem partir caractere', () => {
+  const nome = 'Aniversário da avó — comemoração no salão ' + 'ç'.repeat(40) + ' 🎉🎂 fim';
+  const ics = icsDe({ datas: [{ nome, data: '2026-05-10' }] }, '2026-03-15T12:00:00-03:00');
+  for (const l of ics.split('\r\n')) {
+    assert.ok(Buffer.byteLength(l, 'utf8') <= 75, `linha com ${Buffer.byteLength(l, 'utf8')} octetos: ${l}`);
+    assert.ok(!/[\uD800-\uDBFF]$|^ ?[\uDC00-\uDFFF]/.test(l), `surrogate partido: ${l}`);
+  }
+  assert.ok(ics.replace(/\r\n /g, '').includes(`SUMMARY:${nome}\r\n`));
+});
+
+test('Consciência Negra só é feriado nacional a partir de 2024 (Lei 14.759/2023)', () => {
+  assert.doesNotMatch(pagina({}, '2023-11-10T12:00:00-03:00').calendario, /Consciência Negra/);
+  assert.match(pagina({}, '2024-11-10T12:00:00-03:00').calendario, /20\/11 Consciência Negra/);
+});
+
 const comEstoque = (retiradas) => ({ medicamentos: [{ nome: 'Rem', periodos: [{ de: '2026-07-01', ate: null, dose: '2 cp', momento: 'noite', por_dia: 2 }], retiradas }] });
 
 test('estoque: retirada menos consumo estimado e quando acaba', () => {
