@@ -153,9 +153,9 @@ const icsDe = (dados, agora) => {
 };
 
 test('.ics escapa ";" "," e barra no SUMMARY (RFC 5545 §3.3.11)', () => {
-  const ics = icsDe({ datas: [{ nome: 'Prova; parte 1, sala A\\B', data: '2026-05-10' }] }, '2026-03-15T12:00:00-03:00')
+  const ics = icsDe({ datas: [{ nome: 'Prova; parte 1, sala A\\B\rC\nD', data: '2026-05-10' }] }, '2026-03-15T12:00:00-03:00')
     .replace(/\r\n /g, '');
-  assert.match(ics, /SUMMARY:Prova\\; parte 1\\, sala A\\\\B\r\n/);
+  assert.match(ics, /SUMMARY:Prova\\; parte 1\\, sala A\\\\B\\nC\\nD\r\n/);
 });
 
 test('.ics dobra linhas em até 75 octetos UTF-8 sem partir caractere', () => {

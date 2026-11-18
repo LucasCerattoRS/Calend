@@ -604,7 +604,7 @@ function pintarCalendario() {
 // .ics com feriados, eventos e datas (3 anos pra trás, 5 pra frente). Remédio fica de fora:
 // é dado de saúde e o arquivo vai parar em agenda de nuvem.
 // RFC 5545 §3.3.11: em TEXT, barra invertida, ";" e "," levam barra antes (o antigo '\;' era só ";" em JS).
-const icsTxt = (s) => String(s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+const icsTxt = (s) => String(s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r\n|\r|\n/g, '\\n');
 // Dobra em no máximo 75 OCTETOS por linha (RFC 5545 §3.1), contando UTF-8 e sem partir um
 // caractere: "ã" ocupa 2 octetos e um emoji 4, então 60 caracteres podiam passar de 75.
 const octetos = (c) => { const n = c.codePointAt(0); return n < 0x80 ? 1 : n < 0x800 ? 2 : n < 0x10000 ? 3 : 4; };
